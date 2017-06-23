@@ -1,0 +1,113 @@
+<html>
+<head>
+    <script src="assets/jquery-3.2.1.js"></script>
+    <script src="assets/echarts.js"></script>
+    <script src="assets/socket.io.min.js"></script>
+    <script src="assets/world.js"></script>
+    <link rel="stylesheet" href="assets/bootstrap.min.css">
+</head>
+<body>
+<div class="container">
+    <div id="main" class="col-md-10" style="height: 80%;"></div>
+    <div class="col-md-1">
+        <a class="btn btn-primary">test</a>
+    </div>
+</div>
+
+
+<script>
+var chart = echarts.init(document.getElementById('main'));
+
+
+option = {
+    title: {
+        text: 'Netwave大规模扫描地图',
+        subtext: 'data from ZoomEye',
+        sublink: 'http://ics.zoomeye.org/',
+        left: 'center'
+
+    },
+    tooltip : {
+        trigger: 'item'
+    },
+    legend: {
+        orient: 'vertical',
+        y: 'bottom',
+        x:'right',
+        data:['脆弱主机'],
+        textStyle: {
+            color: '#fff'
+        }
+    },
+    geo: {
+        map: 'world',
+        label: {
+            emphasis: {
+                show: false
+            }
+        },
+        roam: true,
+        itemStyle: {
+            normal: {
+                areaColor: '#323c48',
+                borderColor: '#111'
+            },
+            emphasis: {
+                areaColor: '#2a333d'
+            }
+        }
+    },
+    series : [{
+        name: '脆弱主机',
+        type: 'effectScatter',
+        coordinateSystem: 'geo',
+        data: [],
+        symbolSize: function (val) {
+                return val[2] *3 ;
+            },
+        label: {
+            normal: {
+                formatter: '{b}',
+                position: 'right',
+                show: false
+            },
+            emphasis: {
+                show: true
+            }
+        },
+        itemStyle: {
+            normal: {
+                color: '#FFFFFF'
+            }
+        }
+    }]
+};
+var isstoped = false;
+chart.setOption(option);
+var socket = io.connect("http://127.0.0.1:5000/");
+socket.on("connect", function (data) {
+    console.log("connected to the server");
+    socket.emit("init", "trigger")
+});
+socket.on("nextInClient", function (data) {
+    socket.emit("nextInServer", "trigger")
+});
+socket.on("ipVul", function (data) {
+    console.log(data);
+    option.series[0].data.push({
+        name: data.addr,
+        value: [data.lon, data.lat, 1]
+    });
+    chart.setOption(option)
+});
+socket.on("finished", function (data) {
+    console.log("finished");
+});
+socket.on("logInfo", function (data) {
+    console.log(data)
+})
+
+</script>
+</body>
+
+</html>
