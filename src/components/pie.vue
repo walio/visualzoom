@@ -1,8 +1,12 @@
 <template>
-  <div class="chart"></div>
+  <div class='full-height'>
+    <div class='chart'></div>
+    <el-button type='primary' @click='downloadReport'>下载报告</el-button>
+  </div>
 </template>
 <script>
-  import echarts from 'echarts'
+  import echarts from 'echarts/lib/echarts'
+  import JsPDF from 'jspdf'
 
   const defaultOptions = {
     tooltip: {
@@ -12,14 +16,14 @@
     legend: {
       orient: 'vertical',
       x: 'left',
-      data: ['直达', '营销广告', '搜索引擎', '邮件营销', '联盟广告', '视频广告', '百度', '谷歌', '必应', '其他']
+      data: ['安全设备', '信息泄露设备', '可攻破设备']
     },
     series: [
       {
         name: '访问来源',
         type: 'pie',
         selectedMode: 'single',
-        radius: [0, '30%'],
+        radius: [0, '60%'],
 
         label: {
           normal: {
@@ -31,27 +35,7 @@
             show: false
           }
         },
-        data: [
-          {value: 335, name: '直达', selected: true},
-          {value: 679, name: '营销广告'},
-          {value: 1548, name: '搜索引擎'}
-        ]
-      },
-      {
-        name: '访问来源',
-        type: 'pie',
-        radius: ['40%', '55%'],
-
-        data: [
-          {value: 335, name: '直达'},
-          {value: 310, name: '邮件营销'},
-          {value: 234, name: '联盟广告'},
-          {value: 135, name: '视频广告'},
-          {value: 1048, name: '百度'},
-          {value: 251, name: '谷歌'},
-          {value: 147, name: '必应'},
-          {value: 102, name: '其他'}
-        ]
+        data: []
       }
     ]
   }
@@ -62,12 +46,38 @@
       }
     },
     mounted () {
-      let chart = echarts.init(this.$el)
+      let chart = echarts.init(this.$el.querySelector('.chart'))
+      this.options.series[0].data = [
+        {value: this.$store.state.devices.length, name: '脆弱主机'},
+        {value: this.$store.state.total - this.$store.state.devices.length, name: '安全设备'}
+      ]
       chart.setOption(this.options)
       window.addEventListener('resize', function () {
         chart.resize()
       })
       this.chart = chart
+    },
+    methods: {
+      downloadReport () {
+        let doc = new JsPDF()
+        doc.addImage(this.chart.getDataURL(), 'PNG', 20, 60, 600, 330)
+        doc.save()
+      }
+    },
+    watch: {
+      '$store.state.stat': {
+        handler (data) {
+          let options = this.chart.getOption()
+          console.log(options)
+          options.series[0].data = [
+            {value: this.$store.state.devices.length, name: '脆弱主机'},
+            {value: this.$store.state.total - this.$store.state.devices.length, name: '安全设备'}
+          ]
+          this.options = options
+          this.chart.setOption(options)
+        },
+        deep: true
+      }
     }
   }
 

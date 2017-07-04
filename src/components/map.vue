@@ -175,7 +175,6 @@
       '$store.state.devices': {
         handler (dev) {
           let options = this.chart.getOption()
-          // todo: insert into pie chart
           options.series[0].data.push({
             name: dev[0].addr,
             value: [dev[0].lon, dev[0].lat, 1]

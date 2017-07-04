@@ -8,7 +8,8 @@ export default new Vuex.Store({
     isConnected: false,
     message: '',
     isRestoring: false,
-    stat: {}
+    stat: {},
+    total: 1000
   },
   mutations: {
     addDev (state, point) {

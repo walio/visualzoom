@@ -4,7 +4,9 @@
       <echart-map></echart-map>
     </el-row>
     <control-panel></control-panel>
-    <el-dialog title='检测报告' :visible.sync="pieChartVisible"><echart-pie></echart-pie></el-dialog>
+    <el-dialog title='检测报告' :visible.sync="pieChartVisible">
+      <echart-pie></echart-pie>
+    </el-dialog>
     <websocket></websocket>
   </div>
 </template>
@@ -21,7 +23,8 @@ export default {
     '$store.state.stat': {
       handler (data) {
         this.pieChartVisible = true
-      }
+      },
+      deep: true
     }
   }
 }
@@ -47,7 +50,14 @@ html,body{
   width: 100%;
   height: 100%;
 }
+.el-dialog{
+  height: 70%;
+}
   .el-dialog__body{
+    height: 70%;
+    clear: all;
+  }
+  .full-height{
     height: 100%;
   }
 </style>
