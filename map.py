@@ -1,4 +1,6 @@
-from core.server import socketio, app
+from core.request_handler import serve_forver
+from core import init_db
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    init_db()
+    serve_forver()
