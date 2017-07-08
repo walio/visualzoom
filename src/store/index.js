@@ -7,13 +7,11 @@ export default new Vuex.Store({
     runStatus: 'Stopped',
     isConnected: false,
     message: '',
-    isRestoring: false,
-    stat: {},
     total: 1000
   },
   mutations: {
     addDev (state, point) {
-      state.devices.unshift(point)
+      state.devices.unshift(JSON.parse(point))
     },
     startScan (state) {
       if (state.isConnected) {
@@ -38,17 +36,9 @@ export default new Vuex.Store({
     },
     connectFail (state) {
       state.isConnected = false
-      state.runStatus = 'Paused'
-      state.isRestoring = false
     },
     emit (state, message) {
       state.message = message
-    },
-    startRestore (state) {
-      state.isRestoring = true
-    },
-    finishRestore (state) {
-      state.isRestoring = false
     },
     setStat (state, stat) {
       state.stat = stat

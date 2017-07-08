@@ -27,11 +27,25 @@
     data () {
       return {
         connectStatus: 'el-icon-circle-close',
-        buttonText: '开始',
         logInfoText: '扫描状态'
       }
     },
-
+    computed: {
+      buttonText () {
+        switch (this.$store.state.runStatus) {
+          case 'Running':
+            return '暂停'
+          case 'Paused':
+            return '继续'
+          case 'Stopped':
+            return '开始'
+          case 'Finished':
+            return '重新开始'
+          default:
+            return '开始'
+        }
+      }
+    },
     methods: {
       changeScanState () {
         if (!this.$store.state.isConnected) {
@@ -60,7 +74,7 @@
         }
       },
       restoreScan () {
-        this.$store.commit('emit', 'restoreNext')
+        this.$store.commit('emit', 'restore')
       },
       generateReport () {
         this.$store.commit('emit', 'getStat')
@@ -71,24 +85,6 @@
         handler (status) {
           this.connectStatus = status ? 'el-icon-circle-check' : 'el-icon-circle-close'
           status ? this.$message.success('连接成功') : this.$message.error('连接断开')
-        }
-      },
-      '$store.state.runStatus': {
-        handler (status) {
-          switch (status) {
-            case 'Running':
-              this.buttonText = '暂停'
-              break
-            case 'Paused':
-              this.buttonText = '继续'
-              break
-            case 'Stopped':
-              this.buttonText = '开始'
-              break
-            case 'Finished':
-              this.buttonText = '重新开始'
-              break
-          }
         }
       }
     }
