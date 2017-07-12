@@ -10,6 +10,12 @@ class WEAK_LEVEL:
     FRAGILE = 2
 
 
+def insert_device(device):
+    store.execute("INSERT INTO devices VALUES (?,?,?,?,?,?,?,?,?)",
+                  (device.get("ip_addr"), device.get("lat"), device.get("lon"), device.get("addr"), device.get("level"),
+                   device.get("wpapsk"), device.get("ssid"), device.get("user"), device.get("passwd")))
+    store.commit()
+
 # transform data from ZoomEye to the format we want
 def trans(match):
     return {
@@ -28,12 +34,13 @@ def login(logger):
         "username": "907937976@qq.com",
         "password": "bupt1210",
     }
-    logger.info("获取access_token..")
+    logger.info(u"获取access_token..")
     resp = json.loads(requests.post(url="https://api.zoomeye.org/user/login", data=json.dumps(data)).text)
     access_token = resp["access_token"]
     with open("output/access_token.txt", "w") as f:
         f.write(access_token)
-    logger.info("access_token已写入文件")
+    logger.info(u"access_token已写入文件")
+    return access_token
 
 
 def get_dev_list(logger):
@@ -51,22 +58,32 @@ def get_dev_list(logger):
         resp = json.loads(requests.get(
             url='https://api.zoomeye.org/host/search?query=app:"Netwave IP camera http config" &page=%s' % page,
             headers=headers).text)
+        if "error" in resp and resp["message"] == "Invalid Token, Signature has expired":
+            access_token = login()
+            headers = {"Authorization": "JWT " + access_token}
+            continue
         try:
             for dev in resp["matches"]:
                 yield trans(dev)
             page += 1
-            store.execute("update page set page=? where rowid=1", str(page))
+            logger.debug(page)
+            store.execute("update page set page=? where rowid=1", (str(page),))
             store.commit()
             logger.info("已扫描%s个ip" % (page * 10 - 10))
             if page > page_number:
                 break
         except KeyError as err:
             if err == "matches":
-                logger.info("超过请求次数上限")  # 有请求次数限制
+                logger.info(u"超过请求次数上限")  # 有请求次数限制
                 break
             else:
-                logger.debug("其余键值错误:%s" % err)
-                print(resp)
+                logger.debug(u"其余键值错误:%s" % err)
+                logger.debug(resp)
+
+def get_dev_from_file(file):
+    with open(file, "r") as f:
+        for line in f:
+            yield {"ip_addr":line.replace("\n", "")}
 
 
 def restore():
