@@ -4,7 +4,7 @@ from tornado import ioloop
 import logging
 from core.poc import mode_verify, mode_attack
 from core.utils import get_dev_list, insert_device, get_dev_from_file
-from core.request_handler import application
+from core.request_handler import serve_forever
 from core import init_db
 
 global log
@@ -25,9 +25,8 @@ def main():
     apiparser.add_option("-f", "--file", help="load host from files" , action="store")
     (args, _) = apiparser.parse_args()
     if args.server is True:
-        application.listen(80)
-        logger.info('Server listening at http://localhost:80/')
-        ioloop.IOLoop.instance().start()
+        serve_forever()
+        log.info('Server listening at http://localhost:80/')
     elif args.cmd is True:
         if args.file:
             verify_iter = filter(mode_verify(log), get_dev_from_file(args.file))

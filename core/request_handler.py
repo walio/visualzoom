@@ -1,14 +1,23 @@
 # -*- coding:utf-8 -*-
-from tornado import web, websocket
+from tornado import ioloop, web, websocket
 from threading import Thread
 import json
 import logging
-import sys
+import glob
+import os
 from core.poc import mode_verify, mode_attack
-from core.utils import get_dev_list, restore, insert_device
+from core.utils import get_dev_list, restore
 from core import cursor, store
 
 global logger
+
+
+def insert_device(device):
+    store.execute("INSERT INTO devices VALUES (?,?,?,?,?,?,?,?,?)",
+                  (device.get("ip_addr"), device.get("lat"), device.get("lon"), device.get("addr"), device.get("level"),
+                   device.get("wpapsk"), device.get("ssid"), device.get("user"), device.get("passwd")))
+    store.commit()
+
 
 def make_logger(ws):
     fmt_str = '%(asctime)s - %(message)s'
@@ -33,23 +42,46 @@ class TestHandler(web.RequestHandler):
         self.render('index.html')
 
 
+class ViewPoc(web.RequestHandler):
+    def get(self):
+        self.write({
+            "pocs": [
+                {"name": os.path.basename(_), "content": open(_, "r",  encoding="utf-8").read(), "dev_type": "Netwave"}
+                for _ in glob.glob("poc/*.py")
+            ]
+        })
+
+
+class PocHandler(web.RequestHandler):
+    def post(self, name):
+        req = json.loads(self.request.body.decode('utf-8'))
+        with open(req["name"], "w") as f:
+            f.write(req["content"])
+        self.write({"code": 200, "message": "success"})
+
+    def delete(self, name):
+        os.remove("poc/%s.py" % name)
+        self.write({"code": 200, "message": "success"})
+
+
 class BaseWebSocketHandler(websocket.WebSocketHandler):
     def check_origin(self, origin):
         return True
 
     def open(self):
-        logger.debug("%s WebSocket opened" % self.__class__.__name__)
+        print("%s WebSocket opened" % self.__class__.__name__)
 
     def on_close(self):
-        logger.debug("%s WebSocket closed" % self.__class__.__name__)
+        print("%s WebSocket closed" % self.__class__.__name__)
 
 
 class ScanDev(BaseWebSocketHandler):
     isStopped = False
 
     def open(self):
-        logger.debug("scanDev WebSocket opened")
+        print("scanDev WebSocket opened")
         self.set_nodelay(True)
+        global logger
         self.target_iter = filter(mode_attack(logger), filter(mode_verify(logger), get_dev_list(logger)))
 
     def on_message(self, message):
@@ -61,12 +93,13 @@ class ScanDev(BaseWebSocketHandler):
                     insert_device(dev)
                 except StopIteration:
                     self.write_message("finishScan")
-                except Exception:
-                    exc_type, exc_obj, exc_tb = sys.exc_info()
-                    store.execute("insert into exception values (?,?,?,?)", (
-                       str(exc_type), str(exc_obj), exc_tb.tb_frame.f_code.co_filename, str(exc_tb.tb_lineno)))
-                    logger.debug(u"扫描时发生异常，信息已存入数据库")
+                    # except Exception:
+                    #   exc_type, exc_obj, exc_tb = sys.exc_info()
+                    #  store.execute("insert into exception values (?,?,?,?)", (
+                    #     str(exc_type), str(exc_obj), exc_tb.tb_frame.f_code.co_filename, str(exc_tb.tb_lineno)))
+                    # print("扫描时发生异常，信息已存入数据库")
                     self.write_message(None)
+
             scant = Thread(target=scan)
             scant.start()
         elif message == "stop":
@@ -74,7 +107,6 @@ class ScanDev(BaseWebSocketHandler):
 
 
 class GetStat(BaseWebSocketHandler):
-
     def on_message(self, message):
         cursor.execute("SELECT count(*) FROM devices WHERE level=0")
         poss = cursor.fetchone()[0]
@@ -94,29 +126,37 @@ class Restore(BaseWebSocketHandler):
         for dev in restore():
             self.write_message(json.dumps(dev))
         self.write_message("restoreFinish")
-        logger.debug("restore finish")
+        print("restore finish")
 
 
 class LogInfo(BaseWebSocketHandler):
-
     def open(self):
-        logger.debug("logInfo WebSocket opened")
+        print("logInfo WebSocket opened")
+        global logger
         logger = make_logger(self)
-        
+
     def on_message(self, message):
         pass
 
 
-application = web.Application(
-    [
-        (r"/", TestHandler),
-        (r"/scanDev", ScanDev),
-        (r"/restore", Restore),
-        (r"/logInfo", LogInfo),
-        (r"/getStat", GetStat),
-    ],
-    static_path="web/static",
-    template_path="web/",
-    debug=True,
-)
+def serve_forever():
+    application = web.Application(
+        [
+            (r"/", TestHandler),
+            (r"/list", ViewPoc),
+            (r"/poc/(?P<name>.*)", PocHandler),
+            (r"/scanDev", ScanDev),
+            (r"/restore", Restore),
+            (r"/logInfo", LogInfo),
+            (r"/getStat", GetStat),
+        ],
+        static_path="web/static",
+        template_path="web/",
+        debug=True,
+    )
+    application.listen(80)
+    print('Server listening at http://localhost:80/')
+    ioloop.IOLoop.instance().start()
 
+if __name__ == "__main__":
+    serve_forever()
