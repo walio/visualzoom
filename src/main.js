@@ -1,7 +1,8 @@
 
 import Vue from 'vue'
 import Vuex from 'vuex'
-import {Row, Button, Icon, Message, MessageBox, Dialog} from 'element-ui'
+import ElementUI from 'element-ui'
+import 'element-ui/lib/theme-default/index.css'
 import App from './App'
 import router from './router'
 import store from './store'
@@ -11,13 +12,7 @@ import pie from './components/pie'
 import websocket from './components/websocket'
 
 Vue.use(Vuex)
-Vue.use(Row)
-Vue.use(Button)
-Vue.use(Icon)
-Vue.use(Dialog)
-
-Vue.prototype.$confirm = MessageBox.confirm
-Vue.prototype.$message = Message
+Vue.use(ElementUI)
 
 Vue.component('echart-map', map)
 Vue.component('echart-pie', pie)
@@ -28,9 +23,10 @@ Vue.config.productionTip = false
 
 /* eslint-disable no-new */
 new Vue({
-  el: '#app',
+  // el: '#app',
   router,
   store,
-  template: '<App/>',
-  components: { App }
-})
+  // template: '<App/>',
+  // components: { App }
+  render: h => h(App)
+}).$mount('#app')

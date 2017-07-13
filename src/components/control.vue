@@ -2,8 +2,8 @@
   <el-row>
     <el-button type='primary' @click='changeScanState'>{{ buttonText }}</el-button>
     <el-button type='primary' @click='stopScan'>结束扫描</el-button>
-    <el-button type='primary' @click='restoreScan'>从数据库恢复</el-button>
-    <el-button type='primary' @click='generateReport'>生成报告</el-button>
+    <!--<el-button type='primary' @click='restoreScan'>从数据库恢复</el-button>-->
+    <!--<el-button type='primary' @click='generateReport'>生成报告</el-button>-->
     <i :class='connectStatus' id='connection'></i>
     <textarea v-model='logInfoText' id='logInfo' readonly></textarea>
   </el-row>
