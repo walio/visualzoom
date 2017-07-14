@@ -44,24 +44,51 @@ class TestHandler(web.RequestHandler):
 
 class ViewPoc(web.RequestHandler):
     def get(self):
+        page = int(self.get_arguments("page")[0])
+        pocs = [
+            {"name": os.path.basename(_), "content": open(_, "r", encoding="utf-8").read(), "dev_type": "Netwave"}
+            for _ in glob.glob("poc/*.py")
+        ][(page-1)*20:page*20]
         self.write({
-            "pocs": [
-                {"name": os.path.basename(_), "content": open(_, "r",  encoding="utf-8").read(), "dev_type": "Netwave"}
-                for _ in glob.glob("poc/*.py")
-            ]
+            "pocs": pocs,
+            "total": len(pocs)
         })
 
 
 class PocHandler(web.RequestHandler):
-    def post(self, name):
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+
+
+    def options(self, name):
+        self.set_header('Access-Control-Allow-Origin', "http://www.xxx.com")
+        self.set_header('Access-Control-Allow-Headers', "k1,k2")
+        self.set_header('Access-Control-Allow-Methods', "PUT,DELETE")
+        self.set_header('Access-Control-Max-Age', 10)    
+
+
+    def put(self, name):
         req = json.loads(self.request.body.decode('utf-8'))
-        with open(req["name"], "w") as f:
+        with open("poc/%s" % req["name"], "w") as f:
             f.write(req["content"])
         self.write({"code": 200, "message": "success"})
 
     def delete(self, name):
-        os.remove("poc/%s.py" % name)
+        os.remove("poc/%s" % name)
         self.write({"code": 200, "message": "success"})
+
+    def post(self, name):
+        req = json.loads(self.request.body.decode('utf-8'))
+        filename = "poc/%s" % req["name"]
+        if os.path.exists(filename):
+            self.set_status(409)
+            self.finish("Conflict")
+        else:
+            with open(filename, "w") as f:
+                f.write(req["content"])
+            self.write({"code": 200, "message": "success"})
 
 
 class BaseWebSocketHandler(websocket.WebSocketHandler):
