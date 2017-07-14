@@ -1,6 +1,6 @@
 <template>
 	<section>
-		<!--工具条-->
+		<!--&lt;!&ndash;工具条&ndash;&gt;-->
 		<el-col :span="24" class="toolbar" style="padding-bottom: 0px;">
 			<el-form :inline="true" :model="filters">
 				<el-form-item>
@@ -17,22 +17,21 @@
 
 		<!--列表-->
 		<el-table :data="users" highlight-current-row v-loading="listLoading" @selection-change="selsChange" style="width: 100%;">
-			<el-table-column type="selection" width="55">
+			<el-table-column type="selection" :span="2">
 			</el-table-column>
-			<el-table-column type="index" width="60">
+			<el-table-column type="index" :span="2">
 			</el-table-column>
-			<el-table-column prop="name" label="姓名" width="120" sortable>
+			<el-table-column prop="name" label="脚本名称" :span="3" sortable>
 			</el-table-column>
-
-			<el-table-column prop="age" label="年龄" width="100" sortable>
+			<el-table-column prop="dev_type" label="设备类型" :span="3" sortable>
 			</el-table-column>
-			<el-table-column prop="birth" label="生日" width="120" sortable>
-			</el-table-column>
-			<el-table-column prop="addr" label="地址" min-width="180" sortable>
-			</el-table-column>
-			<el-table-column label="操作" width="150">
+      <el-table-column prop="query_string" label="ZoomEye查询字符串" :span="6">
+      </el-table-column>
+      <el-table-column prop="test" label="POC内容" :span="4">
+      </el-table-column>
+			<el-table-column label="操作" :span="4">
 				<template scope="scope">
-					<el-button size="small" @click="handleEdit(scope.$index, scope.row)">编辑</el-button>
+					<el-button size="small" @click="handleEdit(scope.$name, scope.row)">编辑</el-button>
 					<el-button type="danger" size="small" @click="handleDel(scope.$index, scope.row)">删除</el-button>
 				</template>
 			</el-table-column>
@@ -40,7 +39,7 @@
 
 		<!--工具条-->
 		<el-col :span="24" class="toolbar">
-			<el-button type="danger" @click="batchRemove" :disabled="this.sels.length===0">批量删除</el-button>
+			<!--<el-button type="danger" @click="batchRemove" :disabled="this.sels.length===0">批量删除</el-button>-->
 			<el-pagination layout="prev, pager, next" @current-change="handleCurrentChange" :page-size="20" :total="total" style="float:right;">
 			</el-pagination>
 		</el-col>
@@ -48,23 +47,17 @@
 		<!--编辑界面-->
 		<el-dialog title="编辑" v-model="editFormVisible" :close-on-click-modal="false">
 			<el-form :model="editForm" label-width="80px" :rules="editFormRules" ref="editForm">
-				<el-form-item label="姓名" prop="name">
+				<el-form-item label="脚本名称" prop="name">
 					<el-input v-model="editForm.name" auto-complete="off"></el-input>
 				</el-form-item>
-				<el-form-item label="性别">
-					<el-radio-group v-model="editForm.sex">
-						<el-radio class="radio" :label="1">男</el-radio>
-						<el-radio class="radio" :label="0">女</el-radio>
-					</el-radio-group>
-				</el-form-item>
-				<el-form-item label="年龄">
-					<el-input-number v-model="editForm.age" :min="0" :max="200"></el-input-number>
-				</el-form-item>
-				<el-form-item label="生日">
-					<el-date-picker type="date" placeholder="选择日期" v-model="editForm.birth"></el-date-picker>
-				</el-form-item>
-				<el-form-item label="地址">
-					<el-input type="textarea" v-model="editForm.addr"></el-input>
+        <el-form-item label="设备类型" prop="dev_type">
+          <el-input v-model="editForm.dev_type" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="ZoomEye查询字符串" prop="query_string">
+          <el-input v-model="editForm.query_string" auto-complete="off"></el-input>
+        </el-form-item>
+				<el-form-item label="Poc内容" prop="content">
+					<el-input type="textarea" v-model="editForm.content" autosize></el-input>
 				</el-form-item>
 			</el-form>
 			<div slot="footer" class="dialog-footer">
@@ -76,24 +69,18 @@
 		<!--新增界面-->
 		<el-dialog title="新增" v-model="addFormVisible" :close-on-click-modal="false">
 			<el-form :model="addForm" label-width="80px" :rules="addFormRules" ref="addForm">
-				<el-form-item label="姓名" prop="name">
-					<el-input v-model="addForm.name" auto-complete="off"></el-input>
-				</el-form-item>
-				<el-form-item label="性别">
-					<el-radio-group v-model="addForm.sex">
-						<el-radio class="radio" :label="1">男</el-radio>
-						<el-radio class="radio" :label="0">女</el-radio>
-					</el-radio-group>
-				</el-form-item>
-				<el-form-item label="年龄">
-					<el-input-number v-model="addForm.age" :min="0" :max="200"></el-input-number>
-				</el-form-item>
-				<el-form-item label="生日">
-					<el-date-picker type="date" placeholder="选择日期" v-model="addForm.birth"></el-date-picker>
-				</el-form-item>
-				<el-form-item label="地址">
-					<el-input type="textarea" v-model="addForm.addr"></el-input>
-				</el-form-item>
+        <el-form-item label="脚本名称" prop="name">
+          <el-input  v-model="addForm.name" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="设备类型" prop="dev_type">
+          <el-input  v-model="addForm.dev_type" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="ZoomEye查询字符串" prop="query_string">
+          <el-input v-model="addForm.query_string" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="Poc内容" prop="content">
+          <el-input v-model="addForm.content" type="textarea" placeholder="请勿输入中文" autosize></el-input>
+        </el-form-item>
 			</el-form>
 			<div slot="footer" class="dialog-footer">
 				<el-button @click.native="addFormVisible = false">取消</el-button>
@@ -106,17 +93,17 @@
 <script>
   import axios from 'axios'
 
-  let base = 'localhost'
+  let base = 'http://localhost'
 
-  const getUserListPage = params => { return axios.get(`${base}/user/listpage`, { params: params }) }
+  const getPocListPage = params => { return axios.get(`${base}/list`, { params: params }) }
 
-  const removeUser = params => { return axios.get(`${base}/user/remove`, { params: params }) }
+  const removeUser = params => { return axios.delete(`${base}/poc/${params}`) }
 
-  const batchRemoveUser = params => { return axios.get(`${base}/user/batchremove`, { params: params }) }
+//  const batchRemoveUser = params => { return axios.get(`${base}/user/batchremove`, { params: params }) }
 
-  const editUser = params => { return axios.get(`${base}/user/edit`, { params: params }) }
+  const editUser = (name, params) => { return axios.post(`${base}/poc/${name}`, params) }
 
-  const addUser = params => { return axios.get(`${base}/user/add`, { params: params }) }
+  const addUser = (name, params) => { return axios.post(`${base}/poc/${name}`, params) }
   // import NProgress from 'nprogress'
 
   export default {
@@ -135,33 +122,32 @@
         editLoading: false,
         editFormRules: {
           name: [
-            { required: true, message: '请输入姓名', trigger: 'blur' }
+            { required: true, message: '请输入脚本名称', trigger: 'blur' }
           ]
         },
         // 编辑界面数据
         editForm: {
           id: 0,
           name: '',
-          sex: -1,
-          age: 0,
-          birth: '',
-          addr: ''
+          dev_type: '',
+          query_string: '',
+          content: ''
         },
 
         addFormVisible: false,  // 新增界面是否显示
         addLoading: false,
         addFormRules: {
           name: [
-            { required: true, message: '请输入姓名', trigger: 'blur' }
+            { required: true, message: '请输入脚本名称', trigger: 'blur' }
           ]
         },
         // 新增界面数据
         addForm: {
+          id: 0,
           name: '',
-          sex: -1,
-          age: 0,
-          birth: '',
-          addr: ''
+          dev_type: '',
+          query_string: '',
+          content: ''
         }
       }
     },
@@ -178,9 +164,9 @@
         }
         this.listLoading = true
         // NProgress.start();
-        getUserListPage(para).then((res) => {
+        getPocListPage(para).then((res) => {
           this.total = res.data.total
-          this.users = res.data.users
+          this.users = res.data.pocs
           this.listLoading = false
           // NProgress.done();
         })
@@ -192,8 +178,7 @@
         }).then(() => {
           this.listLoading = true
           // NProgress.start();
-          let para = { id: row.id }
-          removeUser(para).then((res) => {
+          removeUser(row.name).then((res) => {
             this.listLoading = false
             // NProgress.done();
             this.$message({
@@ -213,13 +198,6 @@
       // 显示新增界面
       handleAdd: function () {
         this.addFormVisible = true
-        this.addForm = {
-          name: '',
-          sex: -1,
-          age: 0,
-          birth: '',
-          addr: ''
-        }
       },
       // 编辑
       editSubmit: function () {
@@ -229,7 +207,7 @@
               this.editLoading = true
               // NProgress.start();
               let para = Object.assign({}, this.editForm)
-              editUser(para).then((res) => {
+              editUser(para.name, para).then((res) => {
                 this.editLoading = false
                 // NProgress.done();
                 this.$message({
@@ -251,7 +229,7 @@
             this.$confirm('确认提交吗？', '提示', {}).then(() => {
               // NProgress.start();
               let para = Object.assign({}, this.addForm)
-              addUser(para).then((res) => {
+              addUser(para.name, para).then((resp) => {
                 this.addLoading = false
                 // NProgress.done();
                 this.$message({
@@ -261,6 +239,20 @@
                 this.$refs['addForm'].resetFields()
                 this.addFormVisible = false
                 this.getUsers()
+              }).catch((err) => {
+                console.log(err.response)
+                if (err.response.status === 409 && err.response.statusText === 'Conflict') {
+                  console.log(123)
+                  this.addLoading = false
+                  // NProgress.done();
+                  this.$message({
+                    message: 'Poc已存在，不允许重名',
+                    type: 'error'
+                  })
+                  this.$refs['addForm'].resetFields()
+                  this.addFormVisible = false
+                  this.getUsers()
+                }
               })
             })
           }
@@ -268,28 +260,28 @@
       },
       selsChange: function (sels) {
         this.sels = sels
-      },
-      // 批量删除
-      batchRemove: function () {
-        let ids = this.sels.map(item => item.id).toString()
-        this.$confirm('确认删除选中记录吗？', '提示', {
-          type: 'warning'
-        }).then(() => {
-          this.listLoading = true
-          // NProgress.start();
-          let para = { ids: ids }
-          batchRemoveUser(para).then((res) => {
-            this.listLoading = false
-            // NProgress.done();
-            this.$message({
-              message: '删除成功',
-              type: 'success'
-            })
-            this.getUsers()
-          })
-        }).catch(() => {
-        })
       }
+      // 批量删除
+//      batchRemove: function () {
+//        let ids = this.sels.map(item => item.id).toString()
+//        this.$confirm('确认删除选中记录吗？', '提示', {
+//          type: 'warning'
+//        }).then(() => {
+//          this.listLoading = true
+//          // NProgress.start();
+//          let para = { ids: ids }
+//          batchRemoveUser(para).then((res) => {
+//            this.listLoading = false
+//            // NProgress.done();
+//            this.$message({
+//              message: '删除成功',
+//              type: 'success'
+//            })
+//            this.getUsers()
+//          })
+//        }).catch(() => {
+//        })
+//      }
     },
     mounted () {
       this.getUsers()
