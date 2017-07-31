@@ -1,10 +1,8 @@
 <template>
-  <div id="app">
     <transition name="fade"
                 mode="out-in">
       <router-view></router-view>
     </transition>
-  </div>
 </template>
 
 <script>
@@ -15,8 +13,8 @@ export default {
 
 <style lang="scss">
   body {
-    margin: 0px;
-    padding: 0px;
+    margin: 0;
+    padding: 0;
     /*background: url(assets/bg1.jpg) center !important;
           background-size: cover;*/
   // background: #1F2D3D;
@@ -26,8 +24,8 @@ export default {
   }
   #app {
     position: absolute;
-    top: 0px;
-    bottom: 0px;
+    top: 0;
+    bottom: 0;
     width: 100%;
   }
   .el-submenu [class^=fa] {
@@ -42,7 +40,7 @@ export default {
     background: #f2f2f2;
     padding: 10px;
   //border:1px solid #dfe6ec;
-    margin: 10px 0px;
+    margin: 10px 0;
   .el-form-item {
     margin-bottom: 10px;
   }

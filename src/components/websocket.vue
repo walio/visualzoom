@@ -38,8 +38,20 @@ Sock.prototype = {
     } else {
       ws = this.client[index]
     }
-    console.log(this)
     ws.send(message)
+  },
+  reconnect () {
+    let outer = this
+    this.client = this.uri.map(function (uri) {
+      let ws = new WebSocket(outer.host + uri)
+      ws.onopen = () => {
+        outer.isConnected = true
+      }
+      ws.onclose = () => {
+        outer.isConnected = false
+      }
+      return ws
+    })
   }
 
 }
@@ -52,7 +64,6 @@ export default {
     }
   },
   mounted () {
-    // todo: set init option, like attack/verify mode, device choose
     let con = new Sock('ws://localhost/')
     con.addListener('logInfo', (ws, data) => {
       this.logInfoText += data
@@ -61,45 +72,46 @@ export default {
       logInfo.scrollTop = logInfo.scrollHeight
     })
     con.addListener('scanDev', (ws, data) => {
-      if (data === 'finishScan') {
+      if (data === 'Scanfinished') {
         this.$store.commit('finishScan')
-        this.$message.info('扫描结束')
       } else {
-        console.log(data)
         data && this.$store.commit('addDev', data)
-        this.$store.state.runStatus === 'Running' && this.con.sendMessage('scanDev', 'scanNext')
       }
     })
     con.addListener('restore', (ws, data) => {
-      if (data === 'restoreFinish') {
+      if (data === 'restoreFinished') {
         this.$message.success('数据恢复成功')
       } else {
         this.$store.commit('addDev', data)
       }
     })
-    con.addListener('getStat', (ws, data) => {
-      console.log('report stat')
-      console.log(data)
-      this.$store.commit('setStat', data)
-    })
     this.con = con
+  },
+  methods: {
+    emit (uri, message = null) {
+      if (uri === 'reconnect') {
+        this.con.reconnect()
+      } else if (message) {
+        this.con.sendMessage(uri, message)
+      } else {
+        this.sendMessage(uri, '')
+      }
+    }
   },
   watch: {
     '$store.state.runStatus': {
       handler (status) {
         switch (status) {
           case 'Running':
-            this.con.sendMessage('scanDev', 'scanNext')
+            this.con.sendMessage('scanDev', 'start')
+            break
+          case 'Paused' :
+            this.con.sendMessage('scanDev', 'pause')
             break
           case 'Stopped':
-            this.con.sendMessage('clear')
+            this.con.sendMessage('scanDev', 'stop')
             break
         }
-      }
-    },
-    '$store.state.message': {
-      handler (message) {
-        this.con.sendMessage(message, 'trigger')
       }
     },
     'con.isConnected': {

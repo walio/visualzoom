@@ -1,6 +1,22 @@
 <template>
-  <div class="chart"></div>
+  <el-row>
+    <el-col :span="20" class="chart"></el-col>
+    <el-col :span="4" id="log"><textarea v-model='logInfoText' id='logInfo' readonly></textarea></el-col>
+  </el-row>
 </template>
+<style>
+#log{
+  height: 100%
+}
+  #logInfo{
+    height: 100%;
+    width: 100%;
+    border: 0;
+    padding: 0;
+    resize: none;
+    outline: none
+  }
+</style>
 <script>
   import echarts from 'echarts/lib/echarts'
   import 'echarts/map/js/world'
@@ -160,11 +176,12 @@
   export default {
     data () {
       return {
-        options: defaultOptions
+        options: defaultOptions,
+        logInfoText: '扫描状态'
       }
     },
     mounted () {
-      let chart = echarts.init(this.$el)
+      let chart = echarts.init(this.$el.querySelector('.chart'))
       chart.setOption(this.options)
       window.addEventListener('resize', function () {
         chart.resize()

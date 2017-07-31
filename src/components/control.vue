@@ -1,33 +1,23 @@
 <template>
   <el-row>
+    <el-button type='primary' @click='$emit("showConfig")'>设置参数</el-button>
     <el-button type='primary' @click='changeScanState'>{{ buttonText }}</el-button>
-    <el-button type='primary' @click='stopScan'>结束扫描</el-button>
+    <el-button type='primary' @click='$store.commit("stopScan")'>结束扫描</el-button>
     <!--<el-button type='primary' @click='restoreScan'>从数据库恢复</el-button>-->
-    <!--<el-button type='primary' @click='generateReport'>生成报告</el-button>-->
-    <i :class='connectStatus' id='connection'></i>
-    <textarea v-model='logInfoText' id='logInfo' readonly></textarea>
+    <!--<el-button type='primary' @click='$emit("showReport")'>生成报告</el-button>-->
+    <i :class='connectIcon' id='connection' @click='$emit("reconnect")' title="重新连接" style="cursor: pointer;"></i>
   </el-row>
 </template>
 <style>
-  #logInfo{
-    border: 0;
-    padding: 0;
-    float: right;
-    resize: none;
-    width: 50%;
-    outline: none
-  }
   #connection{
     margin-left: 1%
   }
 </style>
 <script>
-
   export default {
     data () {
       return {
-        connectStatus: 'el-icon-circle-close',
-        logInfoText: '扫描状态'
+        connectIcon: 'el-icon-circle-close'
       }
     },
     computed: {
@@ -48,42 +38,29 @@
     },
     methods: {
       changeScanState () {
-        if (!this.$store.state.isConnected) {
-          this.$message.error('失败！连接断开')
-        } else {
-          switch (this.$store.state.runStatus) {
-            case 'Running':
-              this.$store.commit('pauseScan')
-              this.$message.success('扫描暂停！')
-              break
-            case 'Paused':
-            case 'Finished':
-            case 'Stopped':
-              this.$store.commit('startScan')
-              this.$message.success('扫描继续！')
-              break
-          }
-        }
-      },
-      stopScan () {
-        if (!this.$store.state.isConnected) {
-          this.$message.error('失败！连接断开')
-        } else {
-          this.$store.commit('stopScan')
-          this.$message.success('扫描已终止！')
+        switch (this.$store.state.runStatus) {
+          case 'Running':
+            this.$store.commit('pauseScan')
+            break
+          case 'Paused':
+          case 'Finished':
+          case 'Stopped':
+            this.$store.commit('startScan')
+            break
         }
       },
       restoreScan () {
-        this.$store.commit('emit', 'restore')
-      },
-      generateReport () {
-        this.$store.commit('emit', 'getStat')
+        if (this.$store.state.isConnected) {
+          this.$emit('restore')
+        } else {
+          this.$message.error('失败！连接断开')
+        }
       }
     },
     watch: {
       '$store.state.isConnected': {
         handler (status) {
-          this.connectStatus = status ? 'el-icon-circle-check' : 'el-icon-circle-close'
+          this.connectIcon = status ? 'el-icon-circle-check' : 'el-icon-circle-close'
           status ? this.$message.success('连接成功') : this.$message.error('连接断开')
         }
       }

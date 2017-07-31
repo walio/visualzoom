@@ -19,17 +19,15 @@
 		<el-table :data="users" highlight-current-row v-loading="listLoading" @selection-change="selsChange" style="width: 100%;">
 			<el-table-column type="selection" :span="2">
 			</el-table-column>
-			<el-table-column type="index" :span="2">
+			<el-table-column type="index" :span="3">
 			</el-table-column>
 			<el-table-column prop="name" label="脚本名称" :span="3" sortable>
 			</el-table-column>
-			<el-table-column prop="dev_type" label="设备类型" :span="3" sortable>
+			<el-table-column prop="devtype" label="设备类型" :span="3" sortable>
 			</el-table-column>
-      <el-table-column prop="query_string" label="ZoomEye查询字符串" :span="6">
+      <el-table-column prop="zoomQuery" label="ZoomEye查询字符串" :span="3">
       </el-table-column>
-      <el-table-column prop="test" label="POC内容" :span="4">
-      </el-table-column>
-			<el-table-column label="操作" :span="4">
+			<el-table-column label="操作" :span="3">
 				<template scope="scope">
 					<el-button size="small" @click="handleEdit(scope.$name, scope.row)">编辑</el-button>
 					<el-button type="danger" size="small" @click="handleDel(scope.$index, scope.row)">删除</el-button>
@@ -50,11 +48,11 @@
 				<el-form-item label="脚本名称" prop="name">
 					<el-input v-model="editForm.name" auto-complete="off"></el-input>
 				</el-form-item>
-        <el-form-item label="设备类型" prop="dev_type">
-          <el-input v-model="editForm.dev_type" auto-complete="off"></el-input>
+        <el-form-item label="设备类型" prop="devtype">
+          <el-input v-model="editForm.devtype" auto-complete="off" :disabled="true"></el-input>
         </el-form-item>
-        <el-form-item label="ZoomEye查询字符串" prop="query_string">
-          <el-input v-model="editForm.query_string" auto-complete="off"></el-input>
+        <el-form-item label="ZoomEye查询字符串" prop="zoomQuery">
+          <el-input v-model="editForm.zoomQuery" auto-complete="off" :disabled="true"></el-input>
         </el-form-item>
 				<el-form-item label="Poc内容" prop="content">
 					<el-input type="textarea" v-model="editForm.content" autosize></el-input>
@@ -72,11 +70,11 @@
         <el-form-item label="脚本名称" prop="name">
           <el-input  v-model="addForm.name" auto-complete="off"></el-input>
         </el-form-item>
-        <el-form-item label="设备类型" prop="dev_type">
-          <el-input  v-model="addForm.dev_type" auto-complete="off"></el-input>
+        <el-form-item label="设备类型" prop="devtype">
+          <el-input  v-model="addForm.devtype" auto-complete="off"></el-input>
         </el-form-item>
-        <el-form-item label="ZoomEye查询字符串" prop="query_string">
-          <el-input v-model="addForm.query_string" auto-complete="off"></el-input>
+        <el-form-item label="ZoomEye查询字符串" prop="zoomQuery">
+          <el-input v-model="addForm.zoomQuery" auto-complete="off"></el-input>
         </el-form-item>
         <el-form-item label="Poc内容" prop="content">
           <el-input v-model="addForm.content" type="textarea" placeholder="请勿输入中文" autosize></el-input>
@@ -101,7 +99,7 @@
 
 //  const batchRemoveUser = params => { return axios.get(`${base}/user/batchremove`, { params: params }) }
 
-  const editUser = (name, params) => { return axios.post(`${base}/poc/${name}`, params) }
+  const editUser = (name, params) => { return axios.put(`${base}/poc/${name}`, params) }
 
   const addUser = (name, params) => { return axios.post(`${base}/poc/${name}`, params) }
   // import NProgress from 'nprogress'
@@ -129,8 +127,8 @@
         editForm: {
           id: 0,
           name: '',
-          dev_type: '',
-          query_string: '',
+          devtype: '',
+          zoomQuery: '',
           content: ''
         },
 
@@ -145,8 +143,8 @@
         addForm: {
           id: 0,
           name: '',
-          dev_type: '',
-          query_string: '',
+          devtype: '',
+          zoomQuery: '',
           content: ''
         }
       }
@@ -156,35 +154,30 @@
         this.page = val
         this.getUsers()
       },
-      // 获取用户列表
       getUsers () {
         let para = {
           page: this.page,
           name: this.filters.name
         }
         this.listLoading = true
-        // NProgress.start();
         getPocListPage(para).then((res) => {
           this.total = res.data.total
           this.users = res.data.pocs
           this.listLoading = false
-          // NProgress.done();
+        }).catch((err) => {
+          console.log(err)
+          this.$message.error('获取Poc内容失败！')
+          this.listLoading = false
         })
       },
-      // 删除
       handleDel: function (index, row) {
         this.$confirm('确认删除该记录吗?', '提示', {
           type: 'warning'
         }).then(() => {
           this.listLoading = true
-          // NProgress.start();
           removeUser(row.name).then((res) => {
             this.listLoading = false
-            // NProgress.done();
-            this.$message({
-              message: '删除成功',
-              type: 'success'
-            })
+            this.$message.success('删除成功')
             this.getUsers()
           })
         }).catch(() => {
@@ -205,11 +198,9 @@
           if (valid) {
             this.$confirm('确认提交吗？', '提示', {}).then(() => {
               this.editLoading = true
-              // NProgress.start();
               let para = Object.assign({}, this.editForm)
               editUser(para.name, para).then((res) => {
                 this.editLoading = false
-                // NProgress.done();
                 this.$message({
                   message: '提交成功',
                   type: 'success'
