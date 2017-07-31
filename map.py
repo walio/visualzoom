@@ -1,20 +1,11 @@
 # -*- coding:utf-8 -*-
 import optparse
-from tornado import ioloop
 import logging
-from core.poc import mode_verify, mode_attack
-from core.utils import get_dev_list, insert_device, get_dev_from_file
+from core.poc import _verify, _attack
+from core.utils import get_dev_list, get_ip_from_file
 from core.request_handler import serve_forever
 from core import init_db
-
-global log
-log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(message)s')
-ch.setFormatter(formatter)
-log.addHandler(ch)
+from core.iotScanner import check
 
 
 def main():
@@ -22,21 +13,44 @@ def main():
     apiparser = optparse.OptionParser()
     apiparser.add_option("-s", "--server", help="start server at http://localhost:80/", default=False, action="store_true")
     apiparser.add_option("-c", "--cmd", help="start scan in command", default=False, action="store_true")
-    apiparser.add_option("-f", "--file", help="load host from files" , action="store")
+    apiparser.add_option("-f", "--file", help="load ip from files", action="store")
+    apiparser.add_option("-z", "--zoomeye", help="load ip by searching ZoomEye with query string", action="store")
+    apiparser.add_option("-t", "--type", help="specify check type", action="store")
     (args, _) = apiparser.parse_args()
+
     if args.server is True:
         serve_forever()
-        log.info('Server listening at http://localhost:80/')
     elif args.cmd is True:
         if args.file:
-            verify_iter = filter(mode_verify(log), get_dev_from_file(args.file))
+            ip_source = get_ip_from_file(args.file)
+        elif args.zoomeye:
+            ip_source = get_dev_list(args.zoomeye)
         else:
-            verify_iter = filter(mode_verify(log), get_dev_list(log))
-        target_iter = filter(mode_attack(log), verify_iter)
-        for dev in target_iter:
-            log.info(u"设备信息如下：")
-            log.info(str(dev))
-            insert_device(dev)
+            print("please confirm ip source")
+            return
+
+        if args.type == "memory leak":
+            verify_iter = filter(_verify, ip_source)
+            target_iter = filter(_attack, verify_iter)
+        elif args.type == "default password":
+            target_iter = filter(check, ip_source)
+        else:
+            print("please confirm penetration type ")
+            return
+
+        logger = logging.getLogger("root")
+        logger.setLevel(logging.DEBUG)
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(message)s')
+        ch.setFormatter(formatter)
+        logger.addHandler(ch)
+        while True:
+            try:
+                logger.info(u"设备信息如下：")
+                logger.info(str(next(target_iter)))
+            except:
+                logger.warning("exception happened, skip\n")
     else:
         apiparser.print_help()
 

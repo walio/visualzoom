@@ -1,0 +1,1 @@
+__devtype__="type"
