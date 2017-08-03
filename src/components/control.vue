@@ -3,7 +3,7 @@
     <el-button type='primary' @click='$emit("showConfig")'>设置参数</el-button>
     <el-button type='primary' @click='changeScanState'>{{ buttonText }}</el-button>
     <el-button type='primary' @click='$store.commit("stopScan")'>结束扫描</el-button>
-    <!--<el-button type='primary' @click='restoreScan'>从数据库恢复</el-button>-->
+    <el-button type='primary' @click='restoreScan'>从数据库恢复</el-button>
     <!--<el-button type='primary' @click='$emit("showReport")'>生成报告</el-button>-->
     <i :class='connectIcon' id='connection' @click='$emit("reconnect")' title="重新连接" style="cursor: pointer;"></i>
   </el-row>
@@ -50,11 +50,7 @@
         }
       },
       restoreScan () {
-        if (this.$store.state.isConnected) {
-          this.$emit('restore')
-        } else {
-          this.$message.error('失败！连接断开')
-        }
+
       }
     },
     watch: {

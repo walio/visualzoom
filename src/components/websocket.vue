@@ -53,75 +53,56 @@ Sock.prototype = {
       return ws
     })
   }
-
 }
-
 export default {
   data () {
     return {
-      logInfoText: '此处为扫描日志',
       con: {}
     }
   },
   mounted () {
-    let con = new Sock('ws://localhost/')
-    con.addListener('logInfo', (ws, data) => {
-      this.logInfoText += data
-      let logInfo = document.getElementById('logInfo')
-      logInfo.value = this.logInfoText
-      logInfo.scrollTop = logInfo.scrollHeight
+    let con = new Sock(this.$store.state.wshost)
+    con.addListener('log', (ws, data) => {
+      this.$store.commit('addLog', data)
     })
-    con.addListener('scanDev', (ws, data) => {
-      if (data === 'Scanfinished') {
-        this.$store.commit('finishScan')
-      } else {
-        data && this.$store.commit('addDev', data)
-      }
-    })
-    con.addListener('restore', (ws, data) => {
-      if (data === 'restoreFinished') {
-        this.$message.success('数据恢复成功')
-      } else {
-        this.$store.commit('addDev', data)
+    con.addListener('dev', (ws, data) => {
+      try {
+        data && this.$store.commit('addDev', JSON.parse(data))
+      } catch (err) {
+        switch (data) {
+          case 'scanFinished':
+            this.$store.commit('finishScan')
+            break
+          case 'stopScanSuccess':
+            this.$message.success('结束扫描成功')
+            break
+          case 'restoreFinished':
+            this.$message.success('恢复完毕')
+            break
+        }
       }
     })
     this.con = con
   },
   methods: {
     emit (uri, message = null) {
-      if (uri === 'reconnect') {
-        this.con.reconnect()
-      } else if (message) {
+      if (message) {
         this.con.sendMessage(uri, message)
       } else {
-        this.sendMessage(uri, '')
+        this.con.sendMessage(uri, '')
       }
+    },
+    reconnect () {
+      this.con.reconnect()
     }
   },
   watch: {
-    '$store.state.runStatus': {
-      handler (status) {
-        switch (status) {
-          case 'Running':
-            this.con.sendMessage('scanDev', 'start')
-            break
-          case 'Paused' :
-            this.con.sendMessage('scanDev', 'pause')
-            break
-          case 'Stopped':
-            this.con.sendMessage('scanDev', 'stop')
-            break
-        }
-      }
-    },
     'con.isConnected': {
       handler (isConnected) {
         if (isConnected) {
           this.$store.commit('connectSuccess')
-          this.$message.success('连接成功')
         } else {
           this.$store.commit('connectFail')
-          this.$message.error('连接断开')
         }
       }
     }

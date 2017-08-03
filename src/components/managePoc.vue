@@ -1,6 +1,5 @@
 <template>
 	<section>
-		<!--&lt;!&ndash;工具条&ndash;&gt;-->
 		<el-col :span="24" class="toolbar" style="padding-bottom: 0px;">
 			<el-form :inline="true" :model="filters">
 				<el-form-item>
@@ -70,10 +69,10 @@
         <el-form-item label="脚本名称" prop="name">
           <el-input  v-model="addForm.name" auto-complete="off"></el-input>
         </el-form-item>
-        <el-form-item label="设备类型" prop="devtype">
+        <el-form-item label="设备类型" prop="devtype" :disabled="true">
           <el-input  v-model="addForm.devtype" auto-complete="off"></el-input>
         </el-form-item>
-        <el-form-item label="ZoomEye查询字符串" prop="zoomQuery">
+        <el-form-item label="ZoomEye查询字符串" prop="zoomQuery" :disabled="true">
           <el-input v-model="addForm.zoomQuery" auto-complete="off"></el-input>
         </el-form-item>
         <el-form-item label="Poc内容" prop="content">
@@ -90,19 +89,6 @@
 
 <script>
   import axios from 'axios'
-
-  let base = 'http://localhost'
-
-  const getPocListPage = params => { return axios.get(`${base}/list`, { params: params }) }
-
-  const removeUser = params => { return axios.delete(`${base}/poc/${params}`) }
-
-//  const batchRemoveUser = params => { return axios.get(`${base}/user/batchremove`, { params: params }) }
-
-  const editUser = (name, params) => { return axios.put(`${base}/poc/${name}`, params) }
-
-  const addUser = (name, params) => { return axios.post(`${base}/poc/${name}`, params) }
-  // import NProgress from 'nprogress'
 
   export default {
     data () {
@@ -160,7 +146,7 @@
           name: this.filters.name
         }
         this.listLoading = true
-        getPocListPage(para).then((res) => {
+        axios.get(`${this.$store.state.host}/poc`, { params: para }).then((res) => {
           this.total = res.data.total
           this.users = res.data.pocs
           this.listLoading = false
@@ -170,12 +156,12 @@
           this.listLoading = false
         })
       },
-      handleDel: function (index, row) {
-        this.$confirm('确认删除该记录吗?', '提示', {
+      handleDel (index, row) {
+        this.$confirm('确认删除该Poc吗?', '提示', {
           type: 'warning'
         }).then(() => {
           this.listLoading = true
-          removeUser(row.name).then((res) => {
+          axios.delete(`${this.$store.state.host}/poc/${row.name}`).then((res) => {
             this.listLoading = false
             this.$message.success('删除成功')
             this.getUsers()
@@ -199,7 +185,7 @@
             this.$confirm('确认提交吗？', '提示', {}).then(() => {
               this.editLoading = true
               let para = Object.assign({}, this.editForm)
-              editUser(para.name, para).then((res) => {
+              axios.put(`${this.$store.state.host}/poc/${para.name}`, para).then((res) => {
                 this.editLoading = false
                 this.$message({
                   message: '提交成功',
@@ -218,11 +204,9 @@
         this.$refs.addForm.validate((valid) => {
           if (valid) {
             this.$confirm('确认提交吗？', '提示', {}).then(() => {
-              // NProgress.start();
               let para = Object.assign({}, this.addForm)
-              addUser(para.name, para).then((resp) => {
+              axios.post(`${this.$store.state.host}/poc/${para.name}`, para).then((resp) => {
                 this.addLoading = false
-                // NProgress.done();
                 this.$message({
                   message: '提交成功',
                   type: 'success'
@@ -235,7 +219,6 @@
                 if (err.response.status === 409 && err.response.statusText === 'Conflict') {
                   console.log(123)
                   this.addLoading = false
-                  // NProgress.done();
                   this.$message({
                     message: 'Poc已存在，不允许重名',
                     type: 'error'

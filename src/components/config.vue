@@ -54,17 +54,14 @@
 </el-dialog>
 </template>
 <style>
-#config .el-form-item__label{
-  text-align: center;
-}
 </style>
 <script>
   import axios from 'axios'
 
-  const base = 'http://localhost'
   export default{
     data () {
       let validateAddIp = (rule, value, callback) => {
+        // todo: validate ip
         if (!value.start || !value.end) {
           callback(new Error('ip不能为空'))
         }
@@ -77,8 +74,6 @@
       return {
         visible: false,
         pocs: [
-          {name: 'test', devtype: 'Netwave'},
-          {name: 'test2', devtype: 'ddd'}
         ],
         config: {
           ipList: [],
@@ -102,31 +97,30 @@
         }
       }
     },
-    mounted () {
-      axios.get(`${base}/list`).then((res) => {
-        this.pocs = res.data.pocs
-      })
-      axios.get(`${base}/config`).then((res) => {
-        if (res) {
-          this.config = res.data
+    watch: {
+      '$store.state.isConnected': {
+        handler (isConnected) {
+          if (isConnected) {
+            axios.get(`${this.$store.state.host}/poc`).then((res) => {
+              this.pocs = res.data.pocs
+            })
+            axios.get(`${this.$store.state.host}/config?fields=ipList,zoomQueries,selectedPoc`).then((res) => {
+              this.config = res.data
+            })
+          }
         }
-      })
+      }
     },
     methods: {
       open () {
         this.visible = true
       },
       submitForm () {
-        axios.post(`${base}/config`, this.config).then(
-          this.$message({
-            message: '配置成功',
-            type: 'success'
-          })
+        axios.put(`${this.$store.state.host}/config`, this.config).then(
+          this.$message.success('配置成功!'),
+          this.visible = false
         ).catch(() => {
-          this.$message({
-            message: '配置失败',
-            type: 'error'
-          })
+          this.$message.error('配置失败！')
         })
       },
       resetForm () {
@@ -134,7 +128,7 @@
       },
       addIpSeg () {
         let valid = true
-        this.$refs['configEdit'].validateField('ipSeg', function (pa) {
+        this.$refs['configEdit'].validateField('ipSeg', () => {
           valid = false
         })
         if (valid) {
@@ -148,6 +142,9 @@
       },
       addZoomQuery () {
         let valid = true
+        console.log('watch')
+        console.log(this)
+        console.log(this.config)
         this.$refs['configEdit'].validateField('zoomQuery', function (pa) {
           valid = false
         })

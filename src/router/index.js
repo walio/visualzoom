@@ -3,7 +3,8 @@ import Router from 'vue-router'
 import home from '@/components/home'
 import admin from '@/components/admin'
 import managePoc from '@/components/managePoc'
-import ipInput from '@/components/ipInput'
+import mapColor from '@/components/mapColor'
+import devList from '@/components/devList'
 
 Vue.use(Router)
 
@@ -15,12 +16,6 @@ export default new Router({
       component: home
     },
     {
-      path: '/ip',
-      name: 'sss',
-      component: ipInput,
-      hidden: true
-    },
-    {
       path: '/admin',
       component: admin,
       name: '',
@@ -29,6 +24,28 @@ export default new Router({
       leaf: true, // 只有一个节点
       children: [
         { path: '/admin/viewPoc', component: managePoc, name: '脚本管理' }
+      ]
+    },
+    {
+      path: '/admin',
+      component: admin,
+      name: '',
+      admin: true,
+      iconCls: 'fa fa-map-marker',
+      leaf: true, // 只有一个节点
+      children: [
+        { path: '/admin/mapColor', component: mapColor, name: '设置' }
+      ]
+    },
+    {
+      path: '/admin',
+      component: admin,
+      name: '',
+      admin: true,
+      iconCls: 'fa fa-list',
+      leaf: true, // 只有一个节点
+      children: [
+        { path: '/admin/devList', component: devList, name: '设备列表' }
       ]
     }
   ]
