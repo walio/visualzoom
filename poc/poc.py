@@ -11,12 +11,13 @@ ssid_pattern = re.compile("(?<=SSID\=).*?(?=\\n)")
 wpapsk_pattern = re.compile("(?<=WPAPSK\=).*?(?=\\n)")
 string_pattern = re.compile(b'[^\x00-\x1F\x7F-\xFF]{4,}')
 # this logger will directly log to front end
-logger = logging.getLogger("root")
+logger = logging.getLogger("webLog")
 
 
 # ip filter basically testing if can be "pinged"
 def _verify(dev):
     ip = dev["ip_addr"]
+    dev["devtype"] = "Netwave"
     logger.info(u"获取地址为%s的主机的信息。。。" % ip)
 
     try:

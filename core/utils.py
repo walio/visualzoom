@@ -6,7 +6,7 @@ import redis
 
 info_store = redis.StrictRedis("127.0.0.1", 6379, 0, decode_responses=True)
 device_store = redis.StrictRedis("127.0.0.1", 6379, 1, decode_responses=True)
-logger = logging.getLogger("root")
+logger = logging.getLogger("webLog")
 
 
 # transform data from ZoomEye to the format we want
@@ -15,7 +15,9 @@ def trans(match):
         "ip_addr": "%s:%s" % (match["ip"], match["portinfo"]["port"]),
         "lat": match["geoinfo"]["location"]["lat"],
         "lon": match["geoinfo"]["location"]["lon"],
-        "addr": match["geoinfo"]["city"]["names"]["zh-CN"]+match["geoinfo"]["country"]["names"]["zh-CN"]+match["geoinfo"]["continent"]["names"]["zh-CN"]
+        "city": match["geoinfo"]["city"]["names"]["zh-CN"],
+        "country": match["geoinfo"]["country"]["names"]["zh-CN"],
+        "continent": match["geoinfo"]["continent"]["names"]["zh-CN"]
     }
 
 
@@ -33,7 +35,7 @@ def get_access_token():
 def get_dev_list(query_string):
     page_number = 1005
     headers = {"Authorization": "JWT " + get_access_token()}
-    page = int(info_store.get("page") or 1)
+    page = int(info_store.get("page"))
 
     while True:
         resp = json.loads(requests.get(
@@ -45,8 +47,7 @@ def get_dev_list(query_string):
         try:
             for dev in resp["matches"]:
                 yield trans(dev)
-            page += 1
-            logger.debug(page)
+            page = page+1
             info_store.set("page", page)
             logger.info("已扫描%s个ip" % (page * 10 - 10))
             if page > page_number:
@@ -56,7 +57,7 @@ def get_dev_list(query_string):
                 logger.info(u"超过请求次数上限")  # 有请求次数限制
                 break
             else:
-                logger.debug(u"其余键值错误:%s" % err)
+                logger.info(u"其余键值错误:%s" % err)
                 logger.debug(resp)
 
 
@@ -69,6 +70,16 @@ def get_ip_from_file(file):
 def restore():
     for _ in device_store.keys("*"):
         yield device_store.hgetall(_)
+
+
+def init_db():
+    info_store.setnx("page","1")
+    info_store.setnx("zoomQueries","[]")
+    info_store.setnx("ipList","[]")
+    info_store.setnx("selectedPoc","''")
+    info_store.setnx("styleJson","[]")
+    info_store.setnx("translate","{}")
+    
 
 
 if __name__ == "__main__":

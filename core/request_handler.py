@@ -7,28 +7,25 @@ import glob
 import os
 import itertools
 import redis
-import pickle
 from core.utils import restore, get_dev_list, device_store, info_store
 poc_store = redis.StrictRedis("127.0.0.1", 6379, 2, decode_responses=True)
-global isStopped
-isStopped = False
 
 
-def make_logger(ws):
+def make_logger(ws, name):
     fmt_str = '%(asctime)s - %(message)s'
     formatter = logging.Formatter(fmt_str)
     logging.basicConfig(level=logging.INFO, format=formatter)
-    logger = logging.getLogger("root")
+    logger = logging.getLogger(name)
 
     class LogInfoHandler(logging.Handler):
         def emit(self, record):
-            ws.write_message(record.getMessage() + "\n")
+            ws.write_message(record.getMessage())
 
     lg = LogInfoHandler()
-    lg.setLevel(logging.INFO)
+    lg.setLevel(logging.DEBUG)
     logger.addHandler(lg)
 
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     return logger
 
 
@@ -50,7 +47,7 @@ def make_target_iter(config):
     return target_iter
 
 
-class BaseHandler(web.RequestHandler):
+class BaseRequest(web.RequestHandler):
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
         self.set_header("Access-Control-Allow-Headers", "x-requested-with")
@@ -69,20 +66,7 @@ class IndexHandler(web.RequestHandler):
         self.render('index.html')
 
 
-class ConfigHandler(BaseHandler):
-    def get(self):
-        self.write(pickle.loads(info_store.get("config")))
-
-    def post(self):
-        config = json.loads(self.request.body.decode('utf-8'))
-        info_store.set("config", pickle.dumps(config))
-        global target_iter
-        target_iter = make_target_iter(config)
-        self.write({"code": 200, "message": "success"})
-
-
-class PocGetter(BaseHandler):
-        
+class PocGetter(BaseRequest):
     def get(self):
         # todo: page index of config
         page = int(self.get_arguments("page")[0] if self.get_arguments("page") else 1)
@@ -108,117 +92,149 @@ class PocGetter(BaseHandler):
         })
 
 
-class PocHandler(BaseHandler):
+class ConfigHandler(BaseRequest):
+    def get(self):
+        fields = self.get_argument("fields").split(",")
+        self.write({_: eval(info_store.get(_)) for _ in fields if info_store.get(_)})
 
+    def put(self):
+        config = json.loads(self.request.body.decode('utf-8'))
+        for (k,v) in config.items():
+            info_store.set(k, repr(v))
+        self.write({"code": 200, "message": "success"})
+
+
+class PocHandler(BaseRequest):
     def get(self, name):
-        with open("poc/%s" % name, "r", encoding="utf-8") as f:
-            self.write({"code": 200, "content": f.read()})
+        try:
+            with open("poc/%s" % name, "r", encoding="utf-8") as f:
+                self.write(f.read())
+        except FileNotFoundError:
+            self.set_status(404)
+            self.finish("Poc File Not Found")
 
     def put(self, name):
-        req = json.loads(self.request.body.decode('utf-8'))
-        with open("poc/%s" % name, "w") as f:
-            f.write(req["content"])
-        self.write({"code": 200, "message": "success"})
+        try:
+            with open("poc/%s" % name, "w", encoding="utf-8") as f:
+                f.write(self.request.body.decode('utf-8'))
+                self.write({"code": 200, "message": "success"})
+        except FileNotFoundError:
+            self.set_status(404)
+            self.finish("Poc File Not Found")
 
     def delete(self, name):
-        os.remove("poc/%s" % name)
-        self.write({"code": 200, "message": "success"})
+        try:
+            os.remove("poc/%s" % name)
+            self.write({"code": 200, "message": "success"})
+        except FileNotFoundError:
+            self.set_status(404)
+            self.finish("Poc File Not Found")
 
     def post(self, name):
-        req = json.loads(self.request.body.decode('utf-8'))
-        filename = "poc/%s" % name
-        if os.path.exists(filename):
+        if os.path.exists("poc/%s" % name):
             self.set_status(409)
             self.finish("Conflict")
         else:
-            with open(filename, "w") as f:
-                f.write(req["content"])
+            with open("poc/%s" % name, "w") as f:
+                f.write(self.request.body.decode('utf-8'))
             self.write({"code": 200, "message": "success"})
 
 
-class BaseWebSocketHandler(websocket.WebSocketHandler):
-    def check_origin(self, origin):
-        return True
+class ScanHandler(BaseRequest):
+    isStopped = False
 
-    def open(self):
-        print("%s WebSocket connected" % self.__class__.__name__)
-        self.set_nodelay(True)
-
-    def on_close(self):
-        print("%s WebSocket disconnected" % self.__class__.__name__)
-
-
-class ScanDev(BaseWebSocketHandler):
-
-    def on_message(self, message):
-        if message == "start":
-            global target_iter
-            global isStopped
+    def get(self, action):
+        logger = logging.getLogger("devReport")
+        if action == "start":
+            target_iter = make_target_iter({
+                "zoomQueries": eval(info_store.get("zoomQueries") or "[]"),
+                "ipList": eval(info_store.get("ipList") or "[]"),
+                "selectedPoc": eval(info_store.get("selectedPoc") or "''"),
+            })
 
             def scan():
                 while True:
-                    if not isStopped:
+                    if not self.isStopped:
                         try:
                             dev = next(target_iter)
-                            self.write_message(json.dumps(dev))
+                            logger.info(json.dumps(dev))
                             device_store.hmset(dev["ip_addr"], dev)
                         except StopIteration:
-                            self.write_message("Scanfinished")
-                        except Exception:
-                            print("exception occur during scan")
+                            logger.info("scanFinished")
+                        #except Exception:
+                         #   print("exception occur during scan")
                     else:
-                        self.write_message("stopScanSuccess")
+                        logger.info("stopScanSuccess")
                     # except Exception:
                     #   exc_type, exc_obj, exc_tb = sys.exc_info()
                     #  store.execute("insert into exception values (?,?,?,?)", (
                     #     str(exc_type), str(exc_obj), exc_tb.tb_frame.f_code.co_filename, str(exc_tb.tb_lineno)))
                     # print("扫描时发生异常，信息已存入数据库")
                     # self.write_message(None)
-
             scant = Thread(target=scan)
+            self.write({"code": 200, "message": "success"})
             scant.start()
-        elif message == "stop" or message == "pause":
-            print("stopped")
-            global isStopped
-            isStopped = True
+        elif action == "pause":
+            self.isStopped = True
+            self.write({"code": 200, "message": "success"})
+        elif action == "stop":
+            self.isStopped = True
+            self.write({"code": 200, "message": "success"})
+        elif action == "restore":
+            fff = logging.getLogger("webLog")
+            for dev in restore():
+                logger.info(json.dumps(dev))
+                fff.info(json.dumps(dev))
+            logger.info("restoreFinished")
 
 
-class Restore(BaseWebSocketHandler):
-    def on_message(self, message):
-        for dev in restore():
-            self.write_message(json.dumps(dev))
-        self.write_message("restoreFinished")
-        print("restore finish")
+class DeviceHandler(BaseRequest):
+    def get(self):
+        page = int(self.get_arguments("page")[0] if self.get_arguments("page") else 1)
+        devices = [device_store.hgetall(_) for _ in device_store.keys("*")]
+        self.write({
+            "total": len(devices),
+            "devices": devices[(page-1)*20:page*20]
+        })
 
+    
+class LogInfo(websocket.WebSocketHandler):
+    def check_origin(self, origin):
+        return True
 
-class LogInfo(BaseWebSocketHandler):
     def open(self):
-        print("logInfo WebSocket opened")
-        global logger
-        logger = make_logger(self)
-
-    def on_message(self, message):
-        pass
+        print("loginfo open")
+        make_logger(self, "webLog")
 
 
-def serve_forever():
+class DevReport(websocket.WebSocketHandler):
+    def check_origin(self, origin):
+        return True
+
+    def open(self):
+        print("devreport open")
+        make_logger(self, "devReport")
+
+
+def serve_forever(port):
     application = web.Application(
         [
             (r"/", IndexHandler),
-            (r"/list", PocGetter),
+            (r"/poc", PocGetter),
             (r"/poc/(?P<name>.*)", PocHandler),
             (r"/config", ConfigHandler),
-            (r"/scanDev", ScanDev),
-            (r"/restore", Restore),
-            (r"/logInfo", LogInfo),
+            (r"/action/(?P<action>.*)", ScanHandler),
+            (r"/device", DeviceHandler),
+            (r"/log", LogInfo),
+            (r"/dev", DevReport)
         ],
         static_path="web/static",
         template_path="web/",
         debug=True,
     )
-    application.listen(80)
-    print('Server listening at http://localhost:80/')
+    application.listen(port)
+    print('Server listening at http://localhost:%s/' % port)
     ioloop.IOLoop.instance().start()
 
 if __name__ == "__main__":
-    serve_forever()
+    serve_forever(80)

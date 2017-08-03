@@ -2,9 +2,8 @@
 import optparse
 import logging
 from core.poc import _verify, _attack
-from core.utils import get_dev_list, get_ip_from_file
+from core.utils import get_dev_list, get_ip_from_file, init_db
 from core.request_handler import serve_forever
-from core import init_db
 from core.iotScanner import check
 
 
@@ -19,7 +18,7 @@ def main():
     (args, _) = apiparser.parse_args()
 
     if args.server is True:
-        serve_forever()
+        serve_forever(80)
     elif args.cmd is True:
         if args.file:
             ip_source = get_ip_from_file(args.file)
