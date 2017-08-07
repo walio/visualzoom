@@ -10,21 +10,34 @@ export default new Vuex.Store({
     isConnected: false,
     total: 1000,
     host: 'http://localhost',
-    wshost: 'ws://localhost/'
+    wshost: 'ws://localhost/ws'
   },
   mutations: {
     addDev (state, dev) {
-      state.devices.unshift(dev)
+      state.devices.push(dev)
+    },
+    addDevs (state, devs) {
+      state.devices.push(...devs)
     },
     addLog (state, log) {
       state.logInfo.unshift(log)
     },
     startScan (state) {
       if (state.isConnected) {
-        axios.get(`${state.host}/action/start`)
-        state.runStatus = 'Running'
-        Vue.prototype.$message.success('已开始扫描！')
-        return true
+        axios.get(`${state.host}/action/start`).then((res) => {
+          state.runStatus = 'Running'
+          Vue.prototype.$message.success('已开始扫描！')
+          return true
+        }).catch((err) => {
+          if (err.response.status === 400 && err.response.statusText === 'lack ip source') {
+            Vue.prototype.$message.error('请指定IP源！')
+          } else if (err.response.status === 400 && err.response.statusText === 'lack ip source') {
+            Vue.prototype.$message.error('请指定Poc！')
+          } else {
+            Vue.prototype.$message.error('开始失败！')
+          }
+          return false
+        })
       } else {
         Vue.prototype.$message.error('连接断开，无法开始扫描！')
         return false
@@ -32,10 +45,11 @@ export default new Vuex.Store({
     },
     pauseScan (state) {
       if (state.isConnected) {
-        axios.get(`${state.host}/action/pause`)
-        state.runStatus = 'Paused'
-        Vue.prototype.$message.success('已暂停扫描！')
-        return true
+        axios.get(`${state.host}/action/pause`).then(() => {
+          state.runStatus = 'Paused'
+          Vue.prototype.$message.success('已暂停扫描！')
+          return true
+        })
       } else {
         Vue.prototype.$message.error('连接断开，无法暂停扫描！')
         return false
@@ -43,21 +57,13 @@ export default new Vuex.Store({
     },
     stopScan (state) {
       if (state.isConnected) {
-        axios.get(`${state.host}/action/stop`)
-        state.runStatus = 'Stopped'
-        Vue.prototype.$message.success('已停止扫描！')
-        return true
+        axios.get(`${state.host}/action/stop`).then(() => {
+          state.runStatus = 'Stopped'
+          Vue.prototype.$message.success('已停止扫描！')
+          return true
+        })
       } else {
         Vue.prototype.$message.error('连接断开，无法停止扫描！')
-        return false
-      }
-    },
-    restore (state) {
-      if (state.isConnected) {
-        axios.get(`${state.host}/action/restore`)
-        return true
-      } else {
-        Vue.prototype.$message.error('连接断开，无法回复数据！')
         return false
       }
     },

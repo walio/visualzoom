@@ -15,8 +15,10 @@
   },
   "dependencies": {
     "axios": "^0.16.2",
+    "codemirror": "^5.28.0",
     "echartslayer": "^0.1.1",
     "element-ui": "^1.3.7",
+    "geolib": "^2.0.22",
     "jspdf": "^1.3.3",
     "mapbox": "^1.0.0-beta8",
     "node-sass": "^4.5.3",

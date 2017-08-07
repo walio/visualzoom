@@ -8,7 +8,7 @@
       <el-pagination layout="prev, pager, next" @current-change="handleCurrentChange" :page-size="20" :total="total" style="float:right;">
       </el-pagination>
     </el-col>
-    <p>注：表格宽度自动设置为内容项最多的设备的项数，表头名称通过translate翻译，如无法翻译显示英文名称</p>
+    <p>注：表格由数据项自适应宽度，表头通过translate的json数据翻译，如无翻译则显示英文</p>
   </section>
 </template>
 <script>
@@ -27,7 +27,7 @@
     mounted () {
       this.listLoading = true
       axios.get(`${this.$store.state.host}/config?fields=translate`).then((res) => {
-        this.translate = res.data.translate
+        this.translate = (res.data.translate || this.translate)
         this.getDevices()
       }).catch(() => {
         this.$message.error('获取翻译信息失败！')
@@ -39,8 +39,9 @@
         this.getDevices()
       },
       getDevices () {
-        axios.get(`${this.$store.state.host}/device?page=${this.page}`).then((res) => {
+        axios.get(`${this.$store.state.host}/devices?page=${this.page}`).then((res) => {
           let cols = {}
+
           res.data.devices.map((dev) => {
             for (let _ in dev) {
               if (!cols[_]) {
@@ -51,12 +52,11 @@
           this.devs = res.data.devices
           this.total = res.data.total
           this.cols = cols
-          console.log(cols)
-          console.log(this.cols)
           this.listLoading = false
-        }).catch(() => {
+        }).catch((err) => {
           this.$message.error('获取设备信息失败！')
           this.listLoading = false
+          console.log(err)
         })
       }
     }

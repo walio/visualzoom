@@ -3,16 +3,16 @@
   <el-col :span="22" :offset="1" style="margin-top: 3%;margin-bottom: 3%;">
     <el-form :model="config" label-width="86.7%" id="config">
       <el-form-item
-        v-for="(ipSeg, index) in config.ipList"
+        v-for="(ipSeg, index) in config.ip_ranges"
         :label="ipSeg.start + ' - ' + ipSeg.end"
       >
-        <el-col :span="24" style="float: right;"><el-button @click.prevent="removeItem(config.ipList, index)">删除</el-button></el-col>
+        <el-col :span="24" style="float: right;"><el-button @click.prevent="removeItem(config.ip_ranges, index)">删除</el-button></el-col>
       </el-form-item>
       <el-form-item
-        v-for="(query, index) in config.zoomQueries"
+        v-for="(query, index) in config.zoomeye_queries"
         :label="'ZoomEye查询字串: ' + query"
       >
-        <el-col :span="24" style="float: right;"><el-button @click.prevent="removeItem(config.zoomQueries, index)">删除</el-button></el-col>
+        <el-col :span="24" style="float: right;"><el-button @click.prevent="removeItem(config.zoomeye_queries, index)">删除</el-button></el-col>
       </el-form-item>
     </el-form>
     <el-form :model="configEdit" :rules="validateConfigEdit" ref="configEdit" label-width="20%">
@@ -34,13 +34,13 @@
       </el-form-item>
       <el-form-item label="poc名称：">
         <el-col :span="16" :offset="2">
-          <el-select style="width:100%;" v-model="config.selectedPoc" placeholder="请选择Poc内容">
+          <el-select style="width:100%;" v-model="config.selected_poc" placeholder="请选择Poc内容">
             <el-option
               v-for="poc in pocs"
               :label="poc.name"
               :value="poc.name">
               <span style="float: left">{{ poc.name }}</span>
-              <span style="float: right; color: #8492a6; font-size: 13px">{{ poc.devtype }}</span>
+              <span style="float: right; color: #8492a6; font-size: 13px">{{ poc.device_type }}</span>
             </el-option>
           </el-select>
         </el-col>
@@ -76,9 +76,9 @@
         pocs: [
         ],
         config: {
-          ipList: [],
-          zoomQueries: [],
-          selectedPoc: ''
+          ip_ranges: [],
+          zoomeye_queries: [],
+          selected_poc: ''
         },
         configEdit: {
           ipSeg: {
@@ -104,7 +104,7 @@
             axios.get(`${this.$store.state.host}/poc`).then((res) => {
               this.pocs = res.data.pocs
             })
-            axios.get(`${this.$store.state.host}/config?fields=ipList,zoomQueries,selectedPoc`).then((res) => {
+            axios.get(`${this.$store.state.host}/config?fields=ip_ranges,zoomeye_queries,selected_poc`).then((res) => {
               this.config = res.data
             })
           }
@@ -132,7 +132,7 @@
           valid = false
         })
         if (valid) {
-          this.config.ipList.push({
+          this.config.ip_ranges.push({
             start: this.configEdit.ipSeg.start,
             end: this.configEdit.ipSeg.end
           })
@@ -142,19 +142,16 @@
       },
       addZoomQuery () {
         let valid = true
-        console.log('watch')
-        console.log(this)
-        console.log(this.config)
         this.$refs['configEdit'].validateField('zoomQuery', function (pa) {
           valid = false
         })
         if (valid) {
-          this.config.zoomQueries.push(this.configEdit.zoomQuery)
+          this.config.zoomeye_queries.push(this.configEdit.zoomQuery)
           this.configEdit.zoomQuery = ''
         }
       },
       removeItem (l, index) {
-        if (index !== -1 && this.config.zoomQueries.length + this.config.ipList.length > 1) {
+        if (index !== -1 && this.config.zoomeye_queries.length + this.config.ip_ranges.length > 1) {
           l.splice(index, 1)
         }
       }

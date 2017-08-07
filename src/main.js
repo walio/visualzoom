@@ -20,6 +20,7 @@ Vue.component('report', report)
 Vue.component('config', config)
 Vue.component('websocket', websocket)
 
+// Vue.prototype.$websocket = websocket
 // Vue.config.productionTip = false
 /* eslint-disable no-new */
 new Vue({

@@ -2,14 +2,14 @@
 	<section>
 		<el-col :span="24" class="toolbar" style="padding-bottom: 0px;">
 			<el-form :inline="true" :model="filters">
+				<!--<el-form-item>-->
+					<!--<el-input v-model="filters.name" placeholder="姓名"></el-input>-->
+				<!--</el-form-item>-->
+				<!--<el-form-item>-->
+					<!--<el-button type="primary" v-on:click="getUsers">查询</el-button>-->
+				<!--</el-form-item>-->
 				<el-form-item>
-					<el-input v-model="filters.name" placeholder="姓名"></el-input>
-				</el-form-item>
-				<el-form-item>
-					<el-button type="primary" v-on:click="getUsers">查询</el-button>
-				</el-form-item>
-				<el-form-item>
-					<el-button type="primary" @click="handleAdd">新增</el-button>
+					<el-button type="primary" @click="addFormVisible = true">新增</el-button>
 				</el-form-item>
 			</el-form>
 		</el-col>
@@ -22,9 +22,9 @@
 			</el-table-column>
 			<el-table-column prop="name" label="脚本名称" :span="3" sortable>
 			</el-table-column>
-			<el-table-column prop="devtype" label="设备类型" :span="3" sortable>
+			<el-table-column prop="device_type" label="设备类型" :span="3" sortable>
 			</el-table-column>
-      <el-table-column prop="zoomQuery" label="ZoomEye查询字符串" :span="3">
+      <el-table-column prop="zoomeye_query" label="ZoomEye查询字符串" :span="3">
       </el-table-column>
 			<el-table-column label="操作" :span="3">
 				<template scope="scope">
@@ -42,16 +42,16 @@
 		</el-col>
 
 		<!--编辑界面-->
-		<el-dialog title="编辑" v-model="editFormVisible" :close-on-click-modal="false">
+		<el-dialog title="编辑" ref="editForm" v-model="editFormVisible" :close-on-click-modal="false">
 			<el-form :model="editForm" label-width="80px" :rules="editFormRules" ref="editForm">
-				<el-form-item label="脚本名称" prop="name">
+				<el-form-item label="脚本名称" prop="name" :disabled="true">
 					<el-input v-model="editForm.name" auto-complete="off"></el-input>
 				</el-form-item>
-        <el-form-item label="设备类型" prop="devtype">
-          <el-input v-model="editForm.devtype" auto-complete="off" :disabled="true"></el-input>
+        <el-form-item label="设备类型" prop="device_type">
+          <el-input v-model="editForm.device_type" auto-complete="off" :disabled="true"></el-input>
         </el-form-item>
-        <el-form-item label="ZoomEye查询字符串" prop="zoomQuery">
-          <el-input v-model="editForm.zoomQuery" auto-complete="off" :disabled="true"></el-input>
+        <el-form-item label="ZoomEye查询字符串" prop="zoomeye_query">
+          <el-input v-model="editForm.zoomeye_query" auto-complete="off" :disabled="true"></el-input>
         </el-form-item>
 				<el-form-item label="Poc内容" prop="content">
 					<el-input type="textarea" v-model="editForm.content" autosize></el-input>
@@ -64,16 +64,16 @@
 		</el-dialog>
 
 		<!--新增界面-->
-		<el-dialog title="新增" v-model="addFormVisible" :close-on-click-modal="false">
+		<el-dialog title="新增" ref="addForm" v-model="addFormVisible" :close-on-click-modal="false">
 			<el-form :model="addForm" label-width="80px" :rules="addFormRules" ref="addForm">
         <el-form-item label="脚本名称" prop="name">
           <el-input  v-model="addForm.name" auto-complete="off"></el-input>
         </el-form-item>
-        <el-form-item label="设备类型" prop="devtype" :disabled="true">
-          <el-input  v-model="addForm.devtype" auto-complete="off"></el-input>
+        <el-form-item label="设备类型" prop="device_type">
+          <el-input  v-model="addForm.device_type" auto-complete="off" :disabled="true"></el-input>
         </el-form-item>
-        <el-form-item label="ZoomEye查询字符串" prop="zoomQuery" :disabled="true">
-          <el-input v-model="addForm.zoomQuery" auto-complete="off"></el-input>
+        <el-form-item label="ZoomEye查询字符串" prop="zoomeye_query" :disabled="true">
+          <el-input v-model="addForm.zoomeye_query" auto-complete="off" :disabled="true"></el-input>
         </el-form-item>
         <el-form-item label="Poc内容" prop="content">
           <el-input v-model="addForm.content" type="textarea" placeholder="请勿输入中文" autosize></el-input>
@@ -113,8 +113,8 @@
         editForm: {
           id: 0,
           name: '',
-          devtype: '',
-          zoomQuery: '',
+          device_type: '',
+          zoomeye_query: '',
           content: ''
         },
 
@@ -129,8 +129,8 @@
         addForm: {
           id: 0,
           name: '',
-          devtype: '',
-          zoomQuery: '',
+          device_type: '',
+          zoomeye_query: '',
           content: ''
         }
       }
@@ -150,8 +150,8 @@
           this.total = res.data.total
           this.users = res.data.pocs
           this.listLoading = false
-        }).catch((err) => {
-          console.log(err)
+          console.log(this.users)
+        }).catch(() => {
           this.$message.error('获取Poc内容失败！')
           this.listLoading = false
         })
@@ -166,7 +166,12 @@
             this.$message.success('删除成功')
             this.getUsers()
           })
-        }).catch(() => {
+        }).catch((err) => {
+          if (err.response.status === 404 && err.response.statusText === 'Poc File Not Found') {
+            this.$message.error('删除失败，未找到Poc文件！')
+          } else {
+            this.$message.error('删除失败！')
+          }
         })
       },
       // 显示编辑界面
@@ -174,26 +179,24 @@
         this.editFormVisible = true
         this.editForm = Object.assign({}, row)
       },
-      // 显示新增界面
-      handleAdd: function () {
-        this.addFormVisible = true
-      },
       // 编辑
       editSubmit: function () {
         this.$refs.editForm.validate((valid) => {
           if (valid) {
             this.$confirm('确认提交吗？', '提示', {}).then(() => {
               this.editLoading = true
-              let para = Object.assign({}, this.editForm)
-              axios.put(`${this.$store.state.host}/poc/${para.name}`, para).then((res) => {
+              axios.put(`${this.$store.state.host}/poc/${this.editForm.name}`, this.editForm.content).then((res) => {
                 this.editLoading = false
-                this.$message({
-                  message: '提交成功',
-                  type: 'success'
-                })
+                this.$message.success('提交成功')
                 this.$refs['editForm'].resetFields()
                 this.editFormVisible = false
                 this.getUsers()
+              }).catch((err) => {
+                if (err.response.status === 404 && err.response.statusText === 'Poc File Not Found') {
+                  this.$message.error('修改失败，Poc文件不存在！')
+                } else {
+                  this.$message.error('修改失败！')
+                }
               })
             })
           }
@@ -204,28 +207,21 @@
         this.$refs.addForm.validate((valid) => {
           if (valid) {
             this.$confirm('确认提交吗？', '提示', {}).then(() => {
-              let para = Object.assign({}, this.addForm)
-              axios.post(`${this.$store.state.host}/poc/${para.name}`, para).then((resp) => {
+              axios.post(`${this.$store.state.host}/poc/${this.addForm.name}`, this.addForm.content).then((res) => {
                 this.addLoading = false
-                this.$message({
-                  message: '提交成功',
-                  type: 'success'
-                })
+                this.$message.success('提交成功')
                 this.$refs['addForm'].resetFields()
                 this.addFormVisible = false
                 this.getUsers()
               }).catch((err) => {
-                console.log(err.response)
                 if (err.response.status === 409 && err.response.statusText === 'Conflict') {
-                  console.log(123)
                   this.addLoading = false
-                  this.$message({
-                    message: 'Poc已存在，不允许重名',
-                    type: 'error'
-                  })
+                  this.$message.error('Poc已存在，不允许重名')
                   this.$refs['addForm'].resetFields()
                   this.addFormVisible = false
                   this.getUsers()
+                } else {
+                  this.$message.error('新增Poc文件失败！')
                 }
               })
             })

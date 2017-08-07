@@ -13,21 +13,19 @@
   import echarts from 'echarts/lib/echarts'
   import 'echarts/map/js/world'
   import 'echarts/extension/bmap/bmap'
-
+  import geolib from 'geolib'
   import axios from 'axios'
 
-  const translate = (dev, translateJson) => {
-    let ret = {}
-    for (let _ in translateJson) {
-      if (dev[_]) {
-        ret[translateJson[_]] = dev[_]
-      }
-    }
-    return ret
-  }
   export default {
     data () {
       let outer = this
+      let tPos = {
+        left: 0,
+        top: 0
+      }
+
+      let lastPoint = [0, 0]
+      let counter = 0
       let defaultOptions = {
         bmap: {
           center: [104.114129, 37.550339],
@@ -112,22 +110,12 @@
               title: '从数据库中恢复',
               icon: 'path://M896 768q237 0 443-43t325-127v170q0 69-103 128t-280 93.5-385 34.5-385-34.5-280-93.5-103-128v-170q119 84 325 127t443 43zm0 768q237 0 443-43t325-127v170q0 69-103 128t-280 93.5-385 34.5-385-34.5-280-93.5-103-128v-170q119 84 325 127t443 43zm0-384q237 0 443-43t325-127v170q0 69-103 128t-280 93.5-385 34.5-385-34.5-280-93.5-103-128v-170q119 84 325 127t443 43zm0-1152q208 0 385 34.5t280 93.5 103 128v128q0 69-103 128t-280 93.5-385 34.5-385-34.5-280-93.5-103-128v-128q0-69 103-128t280-93.5 385-34.5z',
               onclick () {
-                outer.$store.commit('restore')
-              }
-            },
-            myLoad: {
-              title: '读取json数据',
-              icon: 'path://M276.864 129.984h85.12v44.8H237.632v253.248c0 46.976-73.088 85.12-120.064 85.12 46.976 0 120.064 38.144 120.064 85.12v252.8h124.352v45.248h-85.12c-45.568-11.52-85.12-38.336-85.12-85.12v-170.304a85.12 85.12 0 0 0-85.12-85.12H64V470.528h42.56a85.12 85.12 0 0 0 85.12-85.12V215.104c0-47.04 38.144-85.12 85.184-85.12z m468.032 0a85.12 85.12 0 0 1 85.12 85.12v170.304a85.12 85.12 0 0 0 85.12 85.12h42.624v85.184H915.2a85.12 85.12 0 0 0-85.12 85.12v170.304a85.12 85.12 0 0 1-85.184 85.12h-85.12v-46.208H787.2V598.272c0-22.528 8.96-44.16 24.96-60.16s65.536-24.96 88.064-24.96c-22.528 0-72.128-8.96-88.064-24.96a85.12 85.12 0 0 1-24.96-60.16V173.12h-127.552V129.92h85.12z m-244.608 510.912a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m-106.24 0a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m212.544 0a32 32 0 1 1 0 64 32 32 0 0 1 0-64z',
-              onclick () {
-                alert('under development')
-              }
-            },
-            dataView: {
-              title: '设备列表',
-              lang: ['测试标题', '关闭', '刷新'],
-              optionToContent () {
-                alert('under development')
-                return '设备列表'
+                axios.get(`${outer.$store.state.host}/devices`).then((res) => {
+                  axios.get(`${outer.$store.state.host}/devices?size=${res.data.total}`).then((res) => {
+                    outer.$store.commit('addDevs', res.data.devices)
+                  })
+                })
+                outer.$message.success('恢复完毕')
               }
             }
           }
@@ -143,12 +131,75 @@
         },
         tooltip: {
           trigger: 'item',
+          enterable: true,
+          hideDelay: 150,
+          transitionDuration: 0,
+          backgroundColor: 'rgba(255, 255, 255, 1)',
+          textStyle: {
+            color: '#7a8288',
+            fontSize: 12
+          },
+          borderWidth: 1,
+          borderColor: '#7a8288',
+          padding: [15, 10],
+          extraCssText: 'box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);cursor: default; text-align:left;line-height:1.8em',
           formatter: (params, ticket, callback) => {
-            let tip = ''
+            let tip = '<div style="border-bottom: 1px solid rgba(0, 0, 0, .3);  font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">' + params.value[2]['ip'] + '</div>'
             for (let attr in params.value[2]) {
-              tip += (params.value[2][attr] ? attr + ':' + params.value[2][attr] + '<br />' : '')
+              let _ = params.value[2][attr]
+              switch (attr) {
+                case 'lat':
+                  _ = geolib.decimal2sexagesimal(_)
+                  _ += params.value[2][attr] > 0 ? ' E' : ' W'
+                  break
+                case 'lon':
+                  _ = geolib.decimal2sexagesimal(_)
+                  _ += params.value[2][attr] > 0 ? ' N' : ' S'
+                  break
+              }
+              if (outer.translate[attr]) {
+                attr = outer.translate[attr]
+              }
+              tip += (_ ? `${attr} : ${_}<br />` : '')
             }
             return tip
+          },
+          position (point, params, dom, rect, size) {
+            // https://github.com/silverHugh/silverhugh.github.io/blob/master/_project/tower-map/tower_map.js
+            /* In the leastArea, tPos won't be changed more than twice */
+            let leastArea = 15
+            /* Set the offset of tooltip */
+            let mapSize = size.viewSize
+            let tooltipSize = size.contentSize
+            let margin = 50
+            let offsetX = point[0] > (mapSize[0] - tooltipSize[0])
+              ? -(tooltipSize[0] + margin) : margin
+            let offsetY = -tooltipSize[1] / 2
+
+            if (Math.abs(point[0] - lastPoint[0]) < leastArea &&
+              Math.abs(point[1] - lastPoint[1]) < leastArea &&
+              counter >= 2) {
+              return tPos
+            }
+            if (Math.abs(point[0] - lastPoint[0]) >= leastArea ||
+              Math.abs(point[1] - lastPoint[1]) >= leastArea) {
+              counter = 0
+            }
+            counter += 1
+            if (counter === 1) {
+              tPos.left = point[0] + offsetX
+              tPos.top = point[1] + offsetY
+              lastPoint = [point[0], point[1]]
+              dom.style.display = 'none'
+            }
+            if (counter === 2) {
+              let realX = dom.offsetLeft
+              let realY = dom.offsetTop
+              tPos.left += point[0] - realX + offsetX
+              tPos.top += point[1] - realY + offsetY
+              dom.style.display = 'block'
+            }
+            return tPos
           }
         },
         legend: {
@@ -162,10 +213,11 @@
         },
         series: [{
           name: '脆弱主机',
-          type: 'effectScatter',
+          type: 'scatter',
           coordinateSystem: 'bmap',
+          symbol: 'path://M181.379879 223.676768l-114.064808 290.779798 507.715232 199.157656 187.909172-261.815596L181.379879 223.676768m645.306182 330.35507L768.753778 701.728323l95.968969 101.555717 101.38893-258.47208-139.425616 9.219878m-69.818182-46.028282l-118.574546 166.516363 101.541495 39.833859 72.422142-184.621253-55.389091-21.728969M139.142465 620.662949l66.963394 26.479192-26.296889 57.686627H57.888323v52.061091H214.065131v-1.700202l40.515233-88.877253 73.593535 29.101253 22.791758-57.633617-189.039192-74.749414-22.784 57.632323m142.911353-422.375434l532.067556 627.426263m0-627.426263L259.251717 825.713778',
           data: [],
-          symbolSize: 5,
+          symbolSize: 20,
           label: {
             normal: {
               formatter: '{b}',
@@ -178,14 +230,14 @@
           },
           itemStyle: {
             normal: {
-              color: 'red'
+              color: 'purple'
             }
           }
         }]
       }
       return {
         options: defaultOptions,
-        data: []
+        translate: {}
       }
     },
     mounted () {
@@ -199,6 +251,9 @@
             }
           }
         })
+      })
+      axios.get(`${this.$store.state.host}/config?fields=translate`).then((res) => {
+        this.translate = (res.data.translate || this.translate)
       })
       window.addEventListener('resize', function () {
         chart.resize()
@@ -226,15 +281,19 @@
         deep: true
       },
       '$store.state.devices': {
-        handler (dev) {
-          this.data.push({
-            name: dev[0].city || dev[0].country || dev[0].continent,
-            value: [dev[0].lon, dev[0].lat, translate(dev[0])]
+        handler (devices) {
+          console.log(devices)
+          let data = devices.map((dev) => {
+            return {
+              name: dev.country,
+              value: [dev.lon, dev.lat, dev],
+              dev: {'test': 'test'}
+            }
           })
           this.chart.setOption({
             series: [{
               name: '脆弱主机',
-              data: this.data
+              data: data
             }]
           })
         },
