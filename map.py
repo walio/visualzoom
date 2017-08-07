@@ -1,14 +1,11 @@
 # -*- coding:utf-8 -*-
 import optparse
 import logging
-from core.poc import _verify, _attack
-from core.utils import get_dev_list, get_ip_from_file, init_db
+from core.utils import zoom_iter, get_ip_from_file
 from core.request_handler import serve_forever
-from core.iotScanner import check
 
 
 def main():
-    init_db()
     apiparser = optparse.OptionParser()
     apiparser.add_option("-s", "--server", help="start server at http://localhost:80/", default=False, action="store_true")
     apiparser.add_option("-c", "--cmd", help="start scan in command", default=False, action="store_true")
@@ -23,7 +20,7 @@ def main():
         if args.file:
             ip_source = get_ip_from_file(args.file)
         elif args.zoomeye:
-            ip_source = get_dev_list(args.zoomeye)
+            ip_source = zoom_iter(args.zoomeye)
         else:
             print("please confirm ip source")
             return

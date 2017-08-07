@@ -5,10 +5,8 @@ import json
 import logging
 import glob
 import os
-import itertools
-import redis
-from core.utils import restore, get_dev_list, device_store, info_store
-poc_store = redis.StrictRedis("127.0.0.1", 6379, 2, decode_responses=True)
+import time
+from core.utils import device_store, config_store, error_store, extra_store, scan_iter, set_config
 
 
 def make_logger(ws, name):
@@ -27,24 +25,6 @@ def make_logger(ws, name):
 
     logger.setLevel(logging.DEBUG)
     return logger
-
-
-def make_ip_iter(start, end):
-    # todo
-    yield start
-    yield end
-
-
-def make_target_iter(config):
-    ip_source = iter([])
-    for _ in config["zoomQueries"]:
-        ip_source = itertools.chain(ip_source, get_dev_list(_))
-    for _ in config["ipList"]:
-        ip_source = itertools.chain(ip_source, make_ip_iter(_["start"], _["end"]))
-
-    _poc = __import__("poc.%s" % os.path.splitext(config["selectedPoc"])[0], fromlist=[""])
-    target_iter = filter(_poc._verify, ip_source)
-    return target_iter
 
 
 class BaseRequest(web.RequestHandler):
@@ -68,40 +48,87 @@ class IndexHandler(web.RequestHandler):
 
 class PocGetter(BaseRequest):
     def get(self):
-        # todo: page index of config
         page = int(self.get_arguments("page")[0] if self.get_arguments("page") else 1)
+        size = int(self.get_arguments("size")[0] if self.get_arguments("size") else 20)
         ret = []
-        for _ in glob.glob("poc\*.py")[(page-1)*20:page*20]:
+        for _ in glob.glob("poc\*.py")[(page-1)*size:page*size]:
             if _ == "poc\__init__.py":
                 continue
             try:
-                _module = __import__(os.path.splitext(_)[0].replace("\\", "."), fromlist=[""])
+                _config = __import__(os.path.splitext(_)[0].replace("\\", "."), fromlist=[""]).config
+                assert type(_config) == dict
             except:
-                _module = None
+                _config = {}
                 print("import %s error" % _)
-            ret.append({
+            ret.append(dict({
                 "name": os.path.basename(_),
-                "author": getattr(_module, "__author__", None),
-                "devtype": getattr(_module, "__devtype__", None),
-                "zoomQuery": getattr(_module, "__query__", None),
                 "content": open(_, "r", encoding="utf-8").read()
-            })
+            }, **_config))
         self.write({
             "pocs": ret,
             "total": len(glob.glob("poc/*.py"))
         })
 
 
+class DeviceGetter(BaseRequest):
+    def get(self):
+        page = int(self.get_arguments("page")[0] if self.get_arguments("page") else 1)
+        size = int(self.get_arguments("size")[0] if self.get_arguments("size") else 20)
+        devices = [device_store.hgetall(_) for _ in device_store.keys("*")]
+        self.write({
+            "total": len(devices),
+            "devices": devices[(page-1)*size:page*size]
+        })
+
+
 class ConfigHandler(BaseRequest):
     def get(self):
         fields = self.get_argument("fields").split(",")
-        self.write({_: eval(info_store.get(_)) for _ in fields if info_store.get(_)})
+        _ = {}
+        if "selected_poc" in fields:
+            _["selected_poc"] = config_store.get("selected_poc")
+        if "zoomeye_queries" in fields:
+            _["zoomeye_queries"] = list(config_store.smembers("zoomeye_queries"))
+        if "ip_ranges" in fields:
+            _["ip_ranges"] = [json.loads(_) for _ in config_store.smembers("ip_ranges")]
+        self.write(_)
 
-    def put(self):
-        config = json.loads(self.request.body.decode('utf-8'))
-        for (k,v) in config.items():
-            info_store.set(k, repr(v))
+    def post(self):
+        try:
+            config = json.loads(self.request.body.decode('utf-8'))
+        except json.decoder.JSONDecodeError:
+            self.set_status(400)
+            self.finish("fail to parse json")
+            return
+        try:
+            set_config(config)
+        except AssertionError as err:
+            self.set_status(400)
+            self.finish(str(err))
+            return
+        except ValueError:
+            self.set_status(400)
+            self.finish("Ip address not valid")
+
+    def delete(self):
+        config_store.flushdb()
         self.write({"code": 200, "message": "success"})
+
+
+class ExtraHandler(BaseRequest):
+    def get(self):
+        fields = self.get_argument("fields").split(",")
+        self.write({_: json.loads(extra_store.get(_)) for _ in fields if extra_store.get(_)})
+
+    def post(self):
+        try:
+            extra = json.loads(self.request.body.decode('utf-8'))
+        except json.decoder.JSONDecodeError:
+            self.set_status(400)
+            self.finish("fail to parse json")
+            return
+        for _ in extra.keys():
+            extra_store.set(_, json.dumps(extra[_]))
 
 
 class PocHandler(BaseRequest):
@@ -117,7 +144,7 @@ class PocHandler(BaseRequest):
         try:
             with open("poc/%s" % name, "w", encoding="utf-8") as f:
                 f.write(self.request.body.decode('utf-8'))
-                self.write({"code": 200, "message": "success"})
+            self.write({"code": 200, "message": "success"})
         except FileNotFoundError:
             self.set_status(404)
             self.finish("Poc File Not Found")
@@ -144,33 +171,36 @@ class ScanHandler(BaseRequest):
     isStopped = False
 
     def get(self, action):
-        logger = logging.getLogger("devReport")
+        dev_logger = logging.getLogger("devReport")
+        web_logger = logging.getLogger("webLog")
         if action == "start":
-            target_iter = make_target_iter({
-                "zoomQueries": eval(info_store.get("zoomQueries") or "[]"),
-                "ipList": eval(info_store.get("ipList") or "[]"),
-                "selectedPoc": eval(info_store.get("selectedPoc") or "''"),
-            })
+            if not config_store.get("selected_poc"):
+                self.set_status(400)
+                self.finish("Poc not selected!")
+                return
+            if not config_store.smembers("zoomeye_queries") and not config_store.smembers("ip_ranges"):
+                self.set_status(400)
+                self.finish("Lack ip source")
+            target_iter = scan_iter()
 
             def scan():
                 while True:
                     if not self.isStopped:
                         try:
                             dev = next(target_iter)
-                            logger.info(json.dumps(dev))
-                            device_store.hmset(dev["ip_addr"], dev)
+                            dev_logger.info(json.dumps(dev))
+                            device_store.hmset("%s:%s" % (dev["ip"], dev["port"]), dev)
                         except StopIteration:
-                            logger.info("scanFinished")
+                            dev_logger.info("scanFinished")
+                            break
                         #except Exception:
-                         #   print("exception occur during scan")
+                         #   exc_type, exc_obj, exc_tb = sys.exc_info()
+                           # web_logger.info("扫描时发生异常：")
+                            #for _ in (str(exc_type), exc_tb.tb_frame.f_code.co_filename, str(exc_tb.tb_lineno)):
+                              #  web_logger.critical(_)
+                               # error_store.lpush(time, _)
                     else:
-                        logger.info("stopScanSuccess")
-                    # except Exception:
-                    #   exc_type, exc_obj, exc_tb = sys.exc_info()
-                    #  store.execute("insert into exception values (?,?,?,?)", (
-                    #     str(exc_type), str(exc_obj), exc_tb.tb_frame.f_code.co_filename, str(exc_tb.tb_lineno)))
-                    # print("扫描时发生异常，信息已存入数据库")
-                    # self.write_message(None)
+                        web_logger.info("stopScanSuccess")
             scant = Thread(target=scan)
             self.write({"code": 200, "message": "success"})
             scant.start()
@@ -180,22 +210,6 @@ class ScanHandler(BaseRequest):
         elif action == "stop":
             self.isStopped = True
             self.write({"code": 200, "message": "success"})
-        elif action == "restore":
-            fff = logging.getLogger("webLog")
-            for dev in restore():
-                logger.info(json.dumps(dev))
-                fff.info(json.dumps(dev))
-            logger.info("restoreFinished")
-
-
-class DeviceHandler(BaseRequest):
-    def get(self):
-        page = int(self.get_arguments("page")[0] if self.get_arguments("page") else 1)
-        devices = [device_store.hgetall(_) for _ in device_store.keys("*")]
-        self.write({
-            "total": len(devices),
-            "devices": devices[(page-1)*20:page*20]
-        })
 
     
 class LogInfo(websocket.WebSocketHandler):
@@ -203,7 +217,7 @@ class LogInfo(websocket.WebSocketHandler):
         return True
 
     def open(self):
-        print("loginfo open")
+        print("logInfo open")
         make_logger(self, "webLog")
 
 
@@ -212,7 +226,7 @@ class DevReport(websocket.WebSocketHandler):
         return True
 
     def open(self):
-        print("devreport open")
+        print("devReport open")
         make_logger(self, "devReport")
 
 
@@ -222,11 +236,12 @@ def serve_forever(port):
             (r"/", IndexHandler),
             (r"/poc", PocGetter),
             (r"/poc/(?P<name>.*)", PocHandler),
+            (r"/devices", DeviceGetter),
             (r"/config", ConfigHandler),
+            (r"/style", ExtraHandler),
             (r"/action/(?P<action>.*)", ScanHandler),
-            (r"/device", DeviceHandler),
-            (r"/log", LogInfo),
-            (r"/dev", DevReport)
+            (r"/ws/log", LogInfo),
+            (r"/ws/dev", DevReport)
         ],
         static_path="web/static",
         template_path="web/",
