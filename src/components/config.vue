@@ -1,10 +1,10 @@
 <template>
 <el-dialog title='配置选项' :visible.sync="visible">
-  <el-col :span="22" :offset="1" style="margin-top: 3%;margin-bottom: 3%;">
+  <el-col style="margin-top: 3%;margin-bottom: 3%;">
     <el-form :model="config" label-width="86.7%" id="config">
       <el-form-item
         v-for="(ipSeg, index) in config.ip_ranges"
-        :label="ipSeg.start + ' - ' + ipSeg.end"
+        :label="ipSeg.start + ' - ' + ipSeg.end + ' : ' + ipSeg.port"
       >
         <el-col :span="24" style="float: right;"><el-button @click.prevent="removeItem(config.ip_ranges, index)">删除</el-button></el-col>
       </el-form-item>
@@ -20,20 +20,22 @@
         label="ip地址："
         prop="ipSeg"
       >
-        <el-col :span="7" :offset="2"><el-input v-model="configEdit.ipSeg.start"></el-input></el-col>
-        <el-col :span="2">-</el-col>
+        <el-col :span="7"><el-input v-model="configEdit.ipSeg.start"></el-input></el-col>
+        <el-col :span="1">-</el-col>
         <el-col :span="7"><el-input v-model="configEdit.ipSeg.end"></el-input></el-col>
-        <el-col :span="4" :offset="2"><el-button @click.prevent="addIpSeg()">增加</el-button></el-col>
+        <el-col :span="1">:</el-col>
+        <el-col :span="3"><el-input v-model="configEdit.ipSeg.port"></el-input></el-col>
+        <el-col :span="4" :offset="1"><el-button @click.prevent="addIpSeg()">增加</el-button></el-col>
       </el-form-item>
       <el-form-item
         label="ZoomEye查询字串："
         prop="zoomQuery"
       >
-        <el-col :span="16" :offset="2"><el-input v-model="configEdit.zoomQuery"></el-input></el-col>
-        <el-col :span="4" :offset="2"><el-button @click.prevent="addZoomQuery()">增加</el-button></el-col>
+        <el-col :span="19"><el-input v-model="configEdit.zoomQuery"></el-input></el-col>
+        <el-col :span="4" :offset="1"><el-button @click.prevent="addZoomQuery()">增加</el-button></el-col>
       </el-form-item>
       <el-form-item label="poc名称：">
-        <el-col :span="16" :offset="2">
+        <el-col :span="19">
           <el-select style="width:100%;" v-model="config.selected_poc" placeholder="请选择Poc内容">
             <el-option
               v-for="poc in pocs"
@@ -62,8 +64,14 @@
     data () {
       let validateAddIp = (rule, value, callback) => {
         // todo: validate ip
-        if (!value.start || !value.end) {
+        if (!value.start && !value.end) {
           callback(new Error('ip不能为空'))
+        }
+        if (isNaN(parseInt(value.port))) {
+          callback(new Error('端口号必须为数字'))
+        }
+        if (parseInt(value.port) < 0 || parseInt(value.port) > 65536) {
+          callback(new Error('端口号必须在0-65536范围内'))
         }
       }
       let validateAddZoom = (rule, value, callback) => {
@@ -83,7 +91,8 @@
         configEdit: {
           ipSeg: {
             start: '',
-            end: ''
+            end: '',
+            port: ''
           },
           zoomQuery: ''
         },
@@ -106,6 +115,7 @@
             })
             axios.get(`${this.$store.state.host}/config?fields=ip_ranges,zoomeye_queries,selected_poc`).then((res) => {
               this.config = res.data
+              console.log(this.config)
             })
           }
         }
@@ -116,7 +126,7 @@
         this.visible = true
       },
       submitForm () {
-        axios.put(`${this.$store.state.host}/config`, this.config).then(
+        axios.post(`${this.$store.state.host}/config`, this.config).then(
           this.$message.success('配置成功!'),
           this.visible = false
         ).catch(() => {
@@ -134,9 +144,11 @@
         if (valid) {
           this.config.ip_ranges.push({
             start: this.configEdit.ipSeg.start,
-            end: this.configEdit.ipSeg.end
+            end: this.configEdit.ipSeg.end,
+            port: parseInt(this.configEdit.ipSeg.port)
           })
           this.configEdit.ipSeg.start = ''
+          this.configEdit.ipSeg.end = ''
           this.configEdit.ipSeg.end = ''
         }
       },

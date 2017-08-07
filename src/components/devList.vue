@@ -26,7 +26,7 @@
     },
     mounted () {
       this.listLoading = true
-      axios.get(`${this.$store.state.host}/config?fields=translate`).then((res) => {
+      axios.get(`${this.$store.state.host}/style?fields=translate`).then((res) => {
         this.translate = (res.data.translate || this.translate)
         this.getDevices()
       }).catch(() => {

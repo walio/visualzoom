@@ -117,6 +117,19 @@
                 })
                 outer.$message.success('恢复完毕')
               }
+            },
+            dataView: {
+              title: '设备列表',
+              optionToContent (opt) {
+                console.log(opt.series[0].data.map((dev) => {
+                  return `<tr><td>${dev.value[2].ip}:${dev.value[2].port}</td><td> ${dev.name}</td></tr>`
+                }))
+                return '<table style="width:100%;text-align:center"><tbody><thead style="font: 25px bold;"><td>ip地址</td><td>地址</td></thead>' +
+                  opt.series[0].data.map((dev) => {
+                    return `<tr><td>${dev.value[2].ip}:${dev.value[2].port}</td><td> ${dev.name}</td></tr>`
+                  }).join('') +
+                  '</tbody></table>'
+              }
             }
           }
         },
@@ -243,7 +256,7 @@
     mounted () {
       let chart = echarts.init(this.$el)
       chart.setOption(this.options)
-      axios.get(`${this.$store.state.host}/config?fields=styleJson`).then((res) => {
+      axios.get(`${this.$store.state.host}/style?fields=styleJson`).then((res) => {
         chart.setOption({
           bmap: {
             mapStyle: {
@@ -252,7 +265,7 @@
           }
         })
       })
-      axios.get(`${this.$store.state.host}/config?fields=translate`).then((res) => {
+      axios.get(`${this.$store.state.host}/style?fields=translate`).then((res) => {
         this.translate = (res.data.translate || this.translate)
       })
       window.addEventListener('resize', function () {
@@ -286,8 +299,7 @@
           let data = devices.map((dev) => {
             return {
               name: dev.country,
-              value: [dev.lon, dev.lat, dev],
-              dev: {'test': 'test'}
+              value: [dev.lon, dev.lat, dev]
             }
           })
           this.chart.setOption({

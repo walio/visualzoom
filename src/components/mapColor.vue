@@ -68,7 +68,7 @@
       }
     },
     mounted () {
-      axios.get(`${this.$store.state.host}/config?fields=styleJson,translate`).then((res) => {
+      axios.get(`${this.$store.state.host}/style?fields=styleJson,translate`).then((res) => {
         this.styleJson.styleJson = JSON.stringify(res.data.styleJson, null, 2) || ''
         this.translate.translate = JSON.stringify(res.data.translate, null, 2) || ''
       })
@@ -77,7 +77,7 @@
       confirm (item) {
         let _ = {}
         _[item] = JSON.parse(this[item][item].replace(/'/g, '"'))
-        axios.put(`${this.$store.state.host}/config`, _).then(() => {
+        axios.post(`${this.$store.state.host}/style`, _).then(() => {
           this.$message.success('配置成功！')
         }).catch(() => {
           this.$message.error('配置失败！')
