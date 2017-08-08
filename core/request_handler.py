@@ -57,9 +57,9 @@ class PocGetter(BaseRequest):
             try:
                 _config = __import__(os.path.splitext(_)[0].replace("\\", "."), fromlist=[""]).config
                 assert type(_config) == dict
-            except:
+            except Exception as err:
                 _config = {}
-                print("import %s error" % _)
+                print("import %s error:%s" % (_,err))
             ret.append(dict({
                 "name": os.path.basename(_),
                 "content": open(_, "r", encoding="utf-8").read()

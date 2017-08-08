@@ -29,7 +29,7 @@ def trans(match):
 
 def get_access_token():
     data = {
-        "username": "907937976@qq.com",
+        "username": "1810440817@qq.com",
         "password": "bupt1210",
     }
     logger.info(u"获取access_token..")
