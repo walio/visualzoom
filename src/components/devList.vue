@@ -1,7 +1,7 @@
 <template>
   <section>
     <el-table :data="devs" highlight-current-row v-loading="listLoading" style="margin-top: 2%;">
-      <el-table-column v-for="(chs, eng) in cols" :label="chs" :prop="eng"></el-table-column>
+      <el-table-column v-for="(chs, eng) in cols" :label="chs" :prop="eng" sortable></el-table-column>
     </el-table>
     <el-col :span="24" class="toolbar">
       <!--<el-button type="danger" @click="batchRemove" :disabled="this.sels.length===0">批量删除</el-button>-->

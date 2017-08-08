@@ -44,8 +44,8 @@
 		<!--编辑界面-->
 		<el-dialog title="编辑" ref="editForm" v-model="editFormVisible" :close-on-click-modal="false">
 			<el-form :model="editForm" label-width="80px" :rules="editFormRules" ref="editForm">
-				<el-form-item label="脚本名称" prop="name" :disabled="true">
-					<el-input v-model="editForm.name" auto-complete="off"></el-input>
+				<el-form-item label="脚本名称" prop="name">
+					<el-input v-model="editForm.name" auto-complete="off" :disabled="true"></el-input>
 				</el-form-item>
         <el-form-item label="设备类型" prop="device_type">
           <el-input v-model="editForm.device_type" auto-complete="off" :disabled="true"></el-input>

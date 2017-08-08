@@ -9,18 +9,20 @@ export default new Vuex.Store({
     runStatus: 'Stopped',
     isConnected: false,
     total: 1000,
-    host: 'http://localhost',
-    wshost: 'ws://localhost/ws'
+    host: 'http://10.109.34.251',
+    wshost: 'ws://10.109.34.251/ws'
   },
   mutations: {
     addDev (state, dev) {
       state.devices.push(dev)
     },
     addDevs (state, devs) {
+      window.a = devs
+      window.b = state.devices
       state.devices.push(...devs)
     },
     addLog (state, log) {
-      state.logInfo.unshift(log)
+      state.logInfo.push(log)
     },
     startScan (state) {
       if (state.isConnected) {

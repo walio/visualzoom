@@ -1,12 +1,9 @@
 <template>
-  <div class="chart"></div>
+  <div id="map"></div>
 </template>
 <style>
   .anchorBL{
     display:none;
-  }
-  .chart{
-    height: 100%;
   }
 </style>
 <script>
@@ -42,14 +39,13 @@
               {
                 type: 'rect',
                 z: 100,
-                top: 'middle',
                 cursor: 'default',
                 shape: {
-                  width: 600,
-                  height: 90
+                  width: 900,
+                  height: 150
                 },
                 style: {
-                  fill: 'rgba(150,150,150,0.3)',
+                  fill: 'rgba(150,150,150,0.8)',
                   shadowBlur: 8,
                   shadowOffsetX: 3,
                   shadowOffsetY: 3,
@@ -61,11 +57,47 @@
                 id: 'log',
                 z: 100,
                 left: 20,
-                top: 'middle',
+                top: 20,
                 cursor: 'default',
                 style: {
-                  fill: '#333',
-                  text: '扫描log信息',
+                  textVerticalAlign: 'top',
+                  fill: 'red',
+                  text: '扫描日志',
+                  font: '14px Microsoft YaHei'
+                }
+              }
+            ]
+          },
+          {
+            type: 'group',
+            right: 50,
+            top: 'middle',
+            children: [
+              {
+                type: 'rect',
+                z: 100,
+                cursor: 'default',
+                shape: {
+                  width: 200,
+                  height: 550
+                },
+                style: {
+                  fill: 'rgba(150,150,150,0.6)',
+                  shadowBlur: 8,
+                  shadowOffsetX: 3,
+                  shadowOffsetY: 3,
+                  shadowColor: 'rgba(0,0,0,0.3)'
+                }
+              },
+              {
+                type: 'text',
+                id: 'device',
+                z: 100,
+                left: 20,
+                top: 20,
+                cursor: 'default',
+                style: {
+                  text: '扫描结果',
                   font: '14px Microsoft YaHei'
                 }
               }
@@ -113,17 +145,16 @@
                 axios.get(`${outer.$store.state.host}/devices`).then((res) => {
                   axios.get(`${outer.$store.state.host}/devices?size=${res.data.total}`).then((res) => {
                     outer.$store.commit('addDevs', res.data.devices)
+                    outer.$message.success('恢复完毕')
                   })
+                }).catch(() => {
+                  outer.$message.error('恢复失败！')
                 })
-                outer.$message.success('恢复完毕')
               }
             },
             dataView: {
               title: '设备列表',
               optionToContent (opt) {
-                console.log(opt.series[0].data.map((dev) => {
-                  return `<tr><td>${dev.value[2].ip}:${dev.value[2].port}</td><td> ${dev.name}</td></tr>`
-                }))
                 return '<table style="width:100%;text-align:center"><tbody><thead style="font: 25px bold;"><td>ip地址</td><td>地址</td></thead>' +
                   opt.series[0].data.map((dev) => {
                     return `<tr><td>${dev.value[2].ip}:${dev.value[2].port}</td><td> ${dev.name}</td></tr>`
@@ -254,7 +285,8 @@
       }
     },
     mounted () {
-      let chart = echarts.init(this.$el)
+      this.$el.style.height = document.documentElement.clientHeight + 'px'
+      let chart = echarts.init(this.$el, 'dark')
       chart.setOption(this.options)
       axios.get(`${this.$store.state.host}/style?fields=styleJson`).then((res) => {
         chart.setOption({
@@ -276,12 +308,14 @@
     watch: {
       '$store.state.logInfo': {
         handler (log) {
+          console.log(log)
           let _
-          if (log.length < 4) {
+          if (log.length < 7) {
             _ = log.join('\n')
           } else {
-            _ = log.splice(log.length - 5).join('\n')
+            _ = log.slice(log.length - 7).join('\n')
           }
+          console.log(_)
           this.chart.setOption({
             graphic: {
               id: 'log',
@@ -295,14 +329,25 @@
       },
       '$store.state.devices': {
         handler (devices) {
-          console.log(devices)
           let data = devices.map((dev) => {
             return {
               name: dev.country,
               value: [dev.lon, dev.lat, dev]
             }
           })
+          let _
+          if (devices.length < 35) {
+            _ = '扫描结果\n' + devices.map((dev) => { return `${dev.ip}\n` }).join('')
+          } else {
+            _ = '扫描结果\n' + devices.slice(devices.length - 35).map((dev) => { return `${dev.ip}\n` }).join('')
+          }
           this.chart.setOption({
+            graphic: {
+              id: 'device',
+              style: {
+                text: _
+              }
+            },
             series: [{
               name: '脆弱主机',
               data: data
