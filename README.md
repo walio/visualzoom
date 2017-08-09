@@ -13,6 +13,12 @@ python3 map.py -s
 
 # screenshot
 
+# refer
+
+https://github.com/vue-bulma/vue-admin
+https://github.com/silverHugh/silverhugh.github.io/blob/master/_project/tower-map/tower_map.js
+
 
 ###### why mutltithread in python so hard to use
+
 

@@ -20,7 +20,10 @@ def make_logger(ws, name):
 
     class LogInfoHandler(logging.Handler):
         def emit(self, record):
-            ws.write_message(record.getMessage())
+            try:
+                ws.write_message(record.getMessage())
+            except websocket.WebSocketClosedError:
+                pass
 
     lg = LogInfoHandler()
     lg.setLevel(logging.DEBUG)
@@ -199,6 +202,9 @@ class LogInfo(websocket.WebSocketHandler):
         print("logInfo open")
         make_logger(self, "webLog")
 
+    def on_close(self):
+        scan_thread.pause()
+
 
 class DevReport(websocket.WebSocketHandler):
     def check_origin(self, origin):
@@ -207,6 +213,9 @@ class DevReport(websocket.WebSocketHandler):
     def open(self):
         print("devReport open")
         make_logger(self, "devReport")
+
+    def on_close(self):
+        scan_thread.pause()
 
 
 def serve_forever(port):
