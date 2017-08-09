@@ -1,12 +1,15 @@
 # -*- coding:utf-8 -*-
 from tornado import ioloop, web, websocket
-from threading import Thread
+from multiprocessing import Process
 import json
 import logging
 import glob
 import os
-import time
-from core.utils import device_store, config_store, error_store, extra_store, scan_iter, set_config
+from core.utils import device_store, config_store, extra_store, set_config, Scan
+
+global scan_thread
+dev_logger = logging.getLogger("devReport")
+web_logger = logging.getLogger("webLog")
 
 
 def make_logger(ws, name):
@@ -59,7 +62,7 @@ class PocGetter(BaseRequest):
                 assert type(_config) == dict
             except Exception as err:
                 _config = {}
-                print("import %s error:%s" % (_,err))
+                print("import %s error:%s" % (_, err))
             ret.append(dict({
                 "name": os.path.basename(_),
                 "content": open(_, "r", encoding="utf-8").read()
@@ -168,11 +171,8 @@ class PocHandler(BaseRequest):
 
 
 class ScanHandler(BaseRequest):
-    isStopped = False
-
     def get(self, action):
-        dev_logger = logging.getLogger("devReport")
-        web_logger = logging.getLogger("webLog")
+        global scan_thread
         if action == "start":
             if not config_store.get("selected_poc"):
                 self.set_status(400)
@@ -181,34 +181,13 @@ class ScanHandler(BaseRequest):
             if not config_store.smembers("zoomeye_queries") and not config_store.smembers("ip_ranges"):
                 self.set_status(400)
                 self.finish("Lack ip source")
-            target_iter = scan_iter()
-
-            def scan():
-                while True:
-                    if not self.isStopped:
-                        try:
-                            dev = next(target_iter)
-                            dev_logger.info(json.dumps(dev))
-                            device_store.hmset("%s:%s" % (dev["ip"], dev["port"]), dev)
-                        except StopIteration:
-                            dev_logger.info("scanFinished")
-                            break
-                        #except Exception:
-                         #   exc_type, exc_obj, exc_tb = sys.exc_info()
-                           # web_logger.info("扫描时发生异常：")
-                            #for _ in (str(exc_type), exc_tb.tb_frame.f_code.co_filename, str(exc_tb.tb_lineno)):
-                              #  web_logger.critical(_)
-                               # error_store.lpush(time, _)
-                    else:
-                        web_logger.info("stopScanSuccess")
-            scant = Thread(target=scan)
-            self.write({"code": 200, "message": "success"})
-            scant.start()
+            scan_thread = Scan()
+            scan_thread.start()
         elif action == "pause":
-            self.isStopped = True
+            scan_thread.pause()
             self.write({"code": 200, "message": "success"})
         elif action == "stop":
-            self.isStopped = True
+            scan_thread.pause()
             self.write({"code": 200, "message": "success"})
 
     

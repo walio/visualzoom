@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 import optparse
 import logging
-from core.utils import zoom_iter, get_ip_from_file
+from core.utils import zoomeye_generator, ip_file_generator
 from core.request_handler import serve_forever
 
 
@@ -18,9 +18,9 @@ def main():
         serve_forever(80)
     elif args.cmd is True:
         if args.file:
-            ip_source = get_ip_from_file(args.file)
+            ip_source = ip_file_generator(args.file)
         elif args.zoomeye:
-            ip_source = zoom_iter(args.zoomeye)
+            ip_source = zoomeye_generator(args.zoomeye)
         else:
             print("please confirm ip source")
             return

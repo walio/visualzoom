@@ -1,14 +1,18 @@
 # visualzoom
-visualize results from zoomeye
+perform hacker attack in a visual way
 
 # Install
 
-pip install --user requests tornado
+pip install --user requests tornado html5lib redis beautifulsoup4 hiredis
 
-# Screenshot
+install redis
+
+# Quick Start
+
+python3 map.py -s
+
+# screenshot
 
 
+###### why mutltithread in python so hard to use
 
-# Usage
-
-python3 map.py -c -f url.txt

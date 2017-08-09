@@ -6,12 +6,15 @@ import logging
 import redis
 import itertools
 import ipaddress
+import threading
 
 config_store = redis.StrictRedis("127.0.0.1", 6379, 0, decode_responses=True)
 device_store = redis.StrictRedis("127.0.0.1", 6379, 1, decode_responses=True)
 error_store = redis.StrictRedis("127.0.0.1", 6379, 2, decode_responses=True)
 extra_store = redis.StrictRedis("127.0.0.1", 6379, 3, decode_responses=True)
-logger = logging.getLogger("webLog")
+
+dev_logger = logging.getLogger("devReport")
+web_logger = logging.getLogger("webLog")
 
 
 # transform data from ZoomEye to the format we want
@@ -32,13 +35,13 @@ def get_access_token():
         "username": "1810440817@qq.com",
         "password": "bupt1210",
     }
-    logger.info(u"获取access_token..")
+    web_logger.info(u"获取access_token..")
     resp = json.loads(requests.post(url="https://api.zoomeye.org/user/login", data=json.dumps(data)).text)
-    logger.info("已获取access_token")
+    web_logger.info("已获取access_token")
     return resp["access_token"]
 
 
-def zoom_iter(query_string):
+def zoomeye_generator(query_string):
     page_number = 1005
     headers = {"Authorization": "JWT " + get_access_token()}
     page = int(config_store.get("page") or 1)
@@ -55,19 +58,19 @@ def zoom_iter(query_string):
                 yield trans(dev)
             page = page+1
             config_store.set("page", page)
-            logger.info("已扫描%s个ip" % (page * 10 - 10))
+            web_logger.info("已扫描%s个ip" % (page * 10 - 10))
             if page > page_number:
                 break
         except KeyError as err:
             if err == "matches":
-                logger.info(u"超过请求次数上限")  # 有请求次数限制
+                web_logger.info(u"超过请求次数上限")  # 有请求次数限制
                 break
             else:
-                logger.info(u"其余键值错误:%s" % err)
-                logger.debug(resp)
+                web_logger.info(u"其余键值错误:%s" % err)
+                web_logger.debug(resp)
 
 
-def get_ip_from_file(file):
+def ip_file_generator(file):
     with open(file, "r") as f:
         for line in f:
             yield {
@@ -76,7 +79,7 @@ def get_ip_from_file(file):
             }
 
 
-def ip_iter(start, end, port):
+def ip_generator(start, end, port):
     for _ in range(int(ipaddress.ip_address(start)), int(ipaddress.ip_address(end))+1):
         yield {
             "ip": str(ipaddress.ip_address(_)),
@@ -84,17 +87,19 @@ def ip_iter(start, end, port):
         }
 
 
-def scan_iter():
+def scan_generator():
     ip_source = iter([])
     for _ in config_store.smembers("zoomeye_queries"):
-        ip_source = itertools.chain(ip_source, zoom_iter(_))
+        ip_source = itertools.chain(ip_source, zoomeye_generator(_))
     for _ in config_store.smembers("ip_ranges"):
         _ = json.loads(_)
-        ip_source = itertools.chain(ip_source, ip_iter(_["start"], _["end"], _["port"]))
+        ip_source = itertools.chain(ip_source, ip_generator(_["start"], _["end"], _["port"]))
 
     poc = __import__("poc.%s" % os.path.splitext(config_store.get("selected_poc"))[0], fromlist=[""])
-    target_iter = filter(poc.verify, ip_source)
-    return target_iter
+    for _ in ip_source:
+        yield poc.verify(_), _
+    # target_iter = filter(poc.verify, ip_source)
+    # return target_iter
 
 
 def set_config(config):
@@ -108,7 +113,7 @@ def set_config(config):
             assert type(_) == str, "zoomeye_queries format not corrected"
         config_store.delete("zoomeye_queries")
         for _ in config["zoomeye_queries"]:
-            config_store.sadd("zoomeye_queries",_)
+            config_store.sadd("zoomeye_queries", _)
     if "ip_ranges" in config.keys():
         assert type(config["ip_ranges"]) == list, "Ip ranges format not correct"
         for _ in config["ip_ranges"]:
@@ -125,6 +130,48 @@ def set_config(config):
                 "port": _["port"]
             }))
 
+
+class Scan(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.iterations = 0
+        self.daemon = True
+        self.paused = True
+        self.state = threading.Condition()
+        self.target_iter = scan_generator()
+
+    def run(self):
+        self.resume()
+        while True:
+            with self.state:
+                if self.paused:
+                    print(self.paused)
+                    self.state.wait()
+            try:
+                print("start")
+                res = next(self.target_iter)
+                if res[0]:
+                    dev_logger.info(json.dumps(res[1]))
+                    device_store.hmset("%s:%s" % (res[1]["ip"], res[1]["port"]), res[1])
+            except StopIteration:
+                dev_logger.info("scanFinished")
+                break
+            # except Exception:
+            #     exc_type, exc_obj, exc_tb = sys.exc_info()
+            #     web_logger.info("扫描时发生异常：")
+            #     for _ in (str(exc_type), exc_tb.tb_frame.f_code.co_filename, str(exc_tb.tb_lineno)):
+            #         web_logger.critical(_)
+            #         error_store.lpush(time, _)
+
+    def resume(self):
+        with self.state:
+            self.paused = False
+            self.state.notify()
+
+    def pause(self):
+        with self.state:
+            self.paused = True
+            web_logger.info("stopScanSuccess")
 
 if __name__ == "__main__":
     pass

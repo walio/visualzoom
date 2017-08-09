@@ -79,6 +79,7 @@ def check_login(dev, url, resp):
                 logger.info("device %s of type %s still has default password\n" % (dev["ip"], dev["device_type"]))
                 dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
                 dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
+                dev["login_url"] = url
                 return True
             else:
                 logger.info("device %s of type %s has changed password\n" % (dev["ip"], dev["device_type"]))
@@ -89,6 +90,7 @@ def check_login(dev, url, resp):
             logger.info("device%s of type %s still has default password\n" % (dev["ip"], dev["device_type"]))
             dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
             dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
+            dev["login_url"] = url
             return True
         else:
             logger.warning("device %s of type %s has changed password\n" % (dev["ip"], dev["device_type"]))
@@ -114,6 +116,7 @@ def check_login(dev, url, resp):
                     logger.info("device %s of type %s still has default password\n" % (dev["ip"], dev["device_type"]))
                     dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
                     dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
+                    dev["login_url"] = url
                     return True
                 else:
                     logger.warning("device %s of type %s has changed password\n" % (dev["ip"], dev["device_type"]))
@@ -123,22 +126,28 @@ def check_login(dev, url, resp):
                     logger.info("device %s of type %s still has default password\n" % (dev["ip"], dev["device_type"]))
                     dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
                     dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
+                    dev["login_url"] = url
                     return True
                 else:
                     logger.warning("device %s of type %s has changed password\n" % (dev["ip"], dev["device_type"]))
                     return False
             elif auth[4] == "!substr":
-                if not auth[5] in resp_.text:
+                if not auth[5] in resp_.text and resp_.status_code == 200:
                     logger.info("device %s of type %s still has default password\n" % (dev["ip"], dev["device_type"]))
                     dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
                     dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
+                    dev["login_url"] = url
                     return True
+                else:
+                    logger.info("device %s of type %s has changed password\n" % (dev["ip"], dev["device_type"]))
+                    return False
         raise Exception("auth[1] of type form auth has another type")
     elif auth[0] == "expect200":
         if requests.get(url, verify=False).status_code == 200:
             logger.info("device %s of type %s not have any password\n" % (dev["ip"], dev["device_type"]))
             dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
             dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
+            dev["login_url"] = url
             return True
         else:
             logger.debug("device %s of type %s fail to expect 200\n" % (dev["ip"], dev["device_type"]))
@@ -193,10 +202,14 @@ def verify(dev, stage="", uri=None, device_type=""):
             else:
                 _ = device_patterns[type_name]["nextUrl"]
                 if _[0] == "string":
-                    if not _[1]:
-                        return check_login(url=compose_url("%s:%s" % (dev["ip"], dev["port"])), resp=resp, dev=dev)
-                    else:
-                        return check_login(url=compose_url("%s:%s" % (dev["ip"], dev["port"]), _[1]), resp=resp, dev=dev)
+                    for _url in _[1:]:
+                        if not _url:
+                            if check_login(url=compose_url("%s:%s" % (dev["ip"], dev["port"])), resp=resp, dev=dev):
+                                return True
+                        else:
+                            if check_login(url=compose_url("%s:%s" % (dev["ip"], dev["port"]), _url), resp=resp, dev=dev):
+                                return True
+                    return False
         elif stage == "look4LoginPage":
             pass
         elif not stage:
@@ -214,7 +227,6 @@ def verify(dev, stage="", uri=None, device_type=""):
         raise Exception("redirect should be automatically handled but not. source:%s, destiny:%s\n" % (dev["ip"], resp.url))
     else:
         logger.warning("unexpected status code status for ip %s\n" % url)
-        dev["test"] = 1
         return False
     if not search4type(resp):
         logger.warning("%s: didnot find dev type after trying all devices\n" % url)

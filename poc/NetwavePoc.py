@@ -49,6 +49,7 @@ def test(dev):
 
 # try to get the username and password and login
 def verify(dev):
+    dev["device_type"]="Netwave"
     if not test(dev):
         return True
     logger.info(u"开始检查主机是否有用户名密码泄露")
@@ -81,8 +82,9 @@ def verify(dev):
                 resp = requests.get("http://%s/get_params.cgi?user=%s&pwd=%s" % (
                     dev["ip_addr"], user, passwd))
                 if resp.status_code == 200:
-                    dev["user"] = user
-                    dev["passwd"] = passwd
+                    dev["admin"] = user
+                    dev["pass"] = passwd
+                    dev["login_url"] = "http://%s:%s" % (dev["ip"], dev["port"])
                     logger.error(u"用户名密码验证成功\n")
                     with open("output/%sp%s.txt" % (dev["ip"], dev["port"]), "w") as f:
                         f.write(resp.text)
