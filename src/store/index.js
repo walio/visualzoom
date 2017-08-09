@@ -8,8 +8,8 @@ export default new Vuex.Store({
     logInfo: [],
     runStatus: 'Stopped',
     isConnected: false,
-    host: 'http://47.93.218.135',
-    wshost: 'ws://47.93.218.135/ws'
+    host: 'http://127.0.0.1',
+    wshost: 'ws://127.0.0.1/ws'
   },
   mutations: {
     addDev (state, dev) {
