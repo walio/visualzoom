@@ -10,7 +10,6 @@
   import echarts from 'echarts/lib/echarts'
   import 'echarts/map/js/world'
   import 'echarts/extension/bmap/bmap'
-  import geolib from 'geolib'
   import axios from 'axios'
 
   export default {
@@ -192,14 +191,15 @@
             for (let attr in params.value[2]) {
               let _ = params.value[2][attr]
               switch (attr) {
+                case 'login_url':
+                  _ = `<a href=${_} target="_blank">${_}</a>`
+                  break
                 case 'lat':
-                  _ = geolib.decimal2sexagesimal(_)
-                  _ += params.value[2][attr] > 0 ? ' E' : ' W'
-                  break
                 case 'lon':
-                  _ = geolib.decimal2sexagesimal(_)
-                  _ += params.value[2][attr] > 0 ? ' N' : ' S'
-                  break
+                case 'city':
+                case 'country':
+                case 'continent':
+                  continue
               }
               if (outer.translate[attr]) {
                 attr = outer.translate[attr]
@@ -310,10 +310,10 @@
         handler (log) {
           console.log(log)
           let _
-          if (log.length < 7) {
+          if (log.length < 6) {
             _ = log.join('\n')
           } else {
-            _ = log.slice(log.length - 7).join('\n')
+            _ = log.slice(log.length - 6).join('\n')
           }
           console.log(_)
           this.chart.setOption({
