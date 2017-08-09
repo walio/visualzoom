@@ -11,6 +11,10 @@ install redis
 
 python3 map.py -s
 
+open http://localhost/#/ to see visual attack,
+[demo](https://www.dropbox.com/s/aciikupk71b6kj3/demo.mp4?dl=0)
+open http://localhost/#/admin to manage admin
+
 # screenshot
 
 # refer
