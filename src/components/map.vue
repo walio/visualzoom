@@ -187,7 +187,13 @@
           padding: [15, 10],
           extraCssText: 'box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);cursor: default; text-align:left;line-height:1.8em',
           formatter: (params, ticket, callback) => {
-            let tip = '<div style="border-bottom: 1px solid rgba(0, 0, 0, .3);  font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">' + params.value[2]['ip'] + '</div>'
+            let tip = `<div style="border-bottom: 1px solid rgba(0, 0, 0, .3);  font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">${params.value[2]['ip']}</div>`
+            if (params.value[2]['device_type']) {
+              tip += `${outer.translate['device_type'] || 'device_type'} : ${params.value[2]['device_type']}<br />`
+            }
+            if (params.value[2]['port']) {
+              tip += `${outer.translate['port'] || 'port'} : ${params.value[2]['port']}<br />`
+            }
             for (let attr in params.value[2]) {
               let _ = params.value[2][attr]
               switch (attr) {
@@ -199,11 +205,12 @@
                 case 'city':
                 case 'country':
                 case 'continent':
+                case 'ip':
+                case 'device_type':
+                case 'port':
                   continue
               }
-              if (outer.translate[attr]) {
-                attr = outer.translate[attr]
-              }
+              attr = outer.translate[attr] || attr
               tip += (_ ? `${attr} : ${_}<br />` : '')
             }
             return tip
@@ -274,21 +281,30 @@
           },
           itemStyle: {
             normal: {
-              color: 'purple'
+              color (para) {
+                let _
+                try {
+                  _ = outer.deviceColor[para['value'][2].device_type]
+                } catch (err) {
+                  _ = 'red'
+                }
+                return _
+              }
             }
           }
         }]
       }
       return {
         options: defaultOptions,
-        translate: {}
+        translate: {},
+        deviceColor: {}
       }
     },
     mounted () {
       this.$el.style.height = document.documentElement.clientHeight + 'px'
       let chart = echarts.init(this.$el, 'dark')
       chart.setOption(this.options)
-      axios.get(`${this.$store.state.host}/style?fields=styleJson`).then((res) => {
+      axios.get(`${this.$store.state.host}/style?fields=styleJson,translate,deviceColor`).then((res) => {
         chart.setOption({
           bmap: {
             mapStyle: {
@@ -296,9 +312,8 @@
             }
           }
         })
-      })
-      axios.get(`${this.$store.state.host}/style?fields=translate`).then((res) => {
         this.translate = (res.data.translate || this.translate)
+        this.deviceColor = (res.data.deviceColor || this.deviceColor)
       })
       window.addEventListener('resize', function () {
         chart.resize()
@@ -308,14 +323,12 @@
     watch: {
       '$store.state.logInfo': {
         handler (log) {
-          console.log(log)
           let _
           if (log.length < 6) {
             _ = log.join('\n')
           } else {
             _ = log.slice(log.length - 6).join('\n')
           }
-          console.log(_)
           this.chart.setOption({
             graphic: {
               id: 'log',

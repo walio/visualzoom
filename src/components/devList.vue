@@ -4,11 +4,10 @@
       <el-table-column v-for="(chs, eng) in cols" :label="chs" :prop="eng" sortable></el-table-column>
     </el-table>
     <el-col :span="24" class="toolbar">
-      <!--<el-button type="danger" @click="batchRemove" :disabled="this.sels.length===0">批量删除</el-button>-->
       <el-pagination layout="prev, pager, next" @current-change="handleCurrentChange" :page-size="20" :total="total" style="float:right;">
       </el-pagination>
     </el-col>
-    <p>注：表格由数据项自适应宽度，表头通过translate的json数据翻译，如无翻译则显示英文</p>
+    <p>注：表格列数自适应，表头项根据翻译json翻译而来</p>
   </section>
 </template>
 <script>
@@ -54,9 +53,10 @@
           this.cols = cols
           this.listLoading = false
         }).catch((err) => {
+          console.log(`${this.$store.state.host}/devices?page=${this.page}`)
+          console.log(err.response)
           this.$message.error('获取设备信息失败！')
           this.listLoading = false
-          console.log(err)
         })
       }
     }

@@ -5,6 +5,7 @@ import admin from '@/components/admin'
 import managePoc from '@/components/managePoc'
 import mapColor from '@/components/mapColor'
 import devList from '@/components/devList'
+import ipinput from '@/components/ipinput'
 
 Vue.use(Router)
 
@@ -46,6 +47,17 @@ export default new Router({
       leaf: true, // 只有一个节点
       children: [
         { path: '/admin/devList', component: devList, name: '设备列表' }
+      ]
+    },
+    {
+      path: '/admin',
+      component: admin,
+      name: '',
+      admin: true,
+      iconCls: 'fa fa-list',
+      leaf: true, // 只有一个节点
+      children: [
+        { path: '/admin/ipinput', component: ipinput, name: 'ip输入组件' }
       ]
     }
   ]

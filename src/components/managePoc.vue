@@ -150,7 +150,6 @@
           this.total = res.data.total
           this.users = res.data.pocs
           this.listLoading = false
-          console.log(this.users)
         }).catch(() => {
           this.$message.error('获取Poc内容失败！')
           this.listLoading = false

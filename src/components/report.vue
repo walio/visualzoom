@@ -55,7 +55,6 @@
       }
     },
     updated () {
-      console.log(123)
       let chart = echarts.init(this.$el.querySelector('.chart'))
       this.options.series[0].data = [
         {value: this.$store.state.devices.length, name: '脆弱主机'},

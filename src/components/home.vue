@@ -14,7 +14,11 @@
       return {
       }
     },
-    mounted () {
+    beforeCreate () {
+      if (window.localStorage.remoteIp) {
+        this.$store.state.host = `http://${window.localStorage.remoteIp}`
+        this.$store.state.wshost = `ws://${window.localStorage.remoteIp}/ws`
+      }
     },
     methods: {
     }

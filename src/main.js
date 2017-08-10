@@ -11,6 +11,7 @@ import map from './components/map'
 import report from './components/report'
 import config from './components/config'
 import websocket from './components/websocket'
+import ipInput from './components/ipinput'
 
 Vue.use(Vuex)
 Vue.use(ElementUI)
@@ -19,6 +20,7 @@ Vue.component('echart-map', map)
 Vue.component('report', report)
 Vue.component('config', config)
 Vue.component('websocket', websocket)
+Vue.component('ip-input', ipInput)
 
 // Vue.prototype.$websocket = websocket
 // Vue.config.productionTip = false
