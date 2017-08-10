@@ -20,7 +20,7 @@ open http://localhost/#/admin to manage admin
 
 # Refer
 
-https://github.com/vue-bulma/vue-admin
+https://github.com/taylorchen709/vue-admin
 
 https://github.com/silverHugh/silverhugh.github.io/blob/master/_project/tower-map/tower_map.js
 
