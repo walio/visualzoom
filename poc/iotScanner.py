@@ -55,13 +55,13 @@ def search4type(resp):
     return ""
 
 
-def compose_url(ip_addr, url=None):
+def compose_url(ip_addr, protocol, url=None):
     if not url:
-        return "http://%s/" % ip_addr
-    elif url.startswith("http"):
+        return "%s://%s/" % (protocol, ip_addr)
+    elif url.startswith("http") or url.startswith("https"):
         return url
     elif url.startswith("/"):
-        return "http://%s%s" % (ip_addr, url)
+        return "%s://%s%s" % (protocol, ip_addr, url)
 
 
 def check_login(dev, url, resp):
@@ -72,28 +72,28 @@ def check_login(dev, url, resp):
     :return: bool
     """
     auth = device_patterns[dev["device_type"]]["auth"]
-    logger.debug("checking login on url: %s" % url)
+    logger.debug("在%s页面检查登录" % url)
     if auth[0] == "basic":
         if not auth[1]:
             if requests.get(url, verify=False).status_code == 200:
-                logger.info("device %s of type %s still has default password\n" % (dev["ip"], dev["device_type"]))
+                logger.info("设备%s，类型为%s，使用了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
                 dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
                 dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
                 dev["login_url"] = url
                 return True
             else:
-                logger.info("device %s of type %s has changed password\n" % (dev["ip"], dev["device_type"]))
+                logger.info("设备%s, 类型为%s，已经更改了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
                 return False
         elif requests.get(url, headers={
             "Authorization": "Basic %s" % base64.b64encode(auth[1].encode(encoding='gb2312')).decode('utf-8')
         }, verify=False).status_code == 200:
-            logger.info("device%s of type %s still has default password\n" % (dev["ip"], dev["device_type"]))
+            logger.info("设备%s，类型为%s，使用了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
             dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
             dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
             dev["login_url"] = url
             return True
         else:
-            logger.warning("device %s of type %s has changed password\n" % (dev["ip"], dev["device_type"]))
+            logger.warning("设备%s, 类型为%s，已经更改了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
             return False
     elif auth[0] == "form":
         if auth[1].startswith("sub") != ("extractFormData" in device_patterns[dev["device_type"]]):
@@ -108,55 +108,55 @@ def check_login(dev, url, resp):
         try:
             resp_ = requests.get(url, post_data, verify=False)
         except requests.exceptions.ConnectionError:
-            logger.error("connection error\n")
+            logger.error("无法连接\n")
             return False
         if auth[3] == "body":
             if auth[4] == "regex":
                 if re.search(auth[5], resp_.text):
-                    logger.info("device %s of type %s still has default password\n" % (dev["ip"], dev["device_type"]))
+                    logger.info("设备%s，类型为%s，使用了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
                     dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
                     dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
                     dev["login_url"] = url
                     return True
                 else:
-                    logger.warning("device %s of type %s has changed password\n" % (dev["ip"], dev["device_type"]))
+                    logger.warning("设备%s, 类型为%s，已经更改了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
                     return False
             elif auth[4] == "substr":
                 if auth[5] in resp_.text:
-                    logger.info("device %s of type %s still has default password\n" % (dev["ip"], dev["device_type"]))
+                    logger.info("设备%s，类型为%s，使用了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
                     dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
                     dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
                     dev["login_url"] = url
                     return True
                 else:
-                    logger.warning("device %s of type %s has changed password\n" % (dev["ip"], dev["device_type"]))
+                    logger.warning("设备%s, 类型为%s，已经更改了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
                     return False
             elif auth[4] == "!substr":
                 if not auth[5] in resp_.text and resp_.status_code == 200:
-                    logger.info("device %s of type %s still has default password\n" % (dev["ip"], dev["device_type"]))
+                    logger.info("设备%s，类型为%s，使用了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
                     dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
                     dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
                     dev["login_url"] = url
                     return True
                 else:
-                    logger.info("device %s of type %s has changed password\n" % (dev["ip"], dev["device_type"]))
+                    logger.info("设备%s, 类型为%s，已经更改了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
                     return False
         raise Exception("auth[1] of type form auth has another type")
     elif auth[0] == "expect200":
         if requests.get(url, verify=False).status_code == 200:
-            logger.info("device %s of type %s not have any password\n" % (dev["ip"], dev["device_type"]))
+            logger.info("设备%s，类型为%s无需任何用户名密码\n" % (dev["ip"], dev["device_type"]))
             dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
             dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
             dev["login_url"] = url
             return True
         else:
-            logger.debug("device %s of type %s fail to expect 200\n" % (dev["ip"], dev["device_type"]))
+            logger.debug("设备%s, 类型为%s，已经更改了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
     else:
         resp_ = requests.get(url, verify=False)
         if resp_.status_code == 301 or resp_.status_code == 302:
             logger.debug("301 and 302 should be automatically handled by requests but not")
         else:
-            logger.warning("device %s: unexpected resp code %d\n" % (url, resp_.status_code))
+            logger.warning("设备%s: 未处理HTTP状态码%d\n" % (url, resp_.status_code))
         raise Exception("unknown auth type: %s" % auth[0])
 
 
@@ -166,48 +166,52 @@ def check_init_login():
 
 def verify(dev, stage="", uri=None, device_type=""):
     if device_type not in device_patterns.keys():
-        logger.error("device type not correct, type will be checked automatically")
+        logger.error("设备类型未指定，自定识别设备类型")
         type_name = ""
     else:
         type_name = device_type
-    url = compose_url("%s:%s" % (dev["ip"], dev["port"]), uri)
+    url = compose_url("%s:%s" % (dev["ip"], dev["port"]), dev["protocol"], uri)
     if stage == "initialClickLoginPage":
         return check_init_login()
     try:
+        resp = requests.get(url, stream=True, verify=False)
+        if resp.headers.get('Content-Type') == 'video/h264':
+            logger.error('无法识别设备%s的类型由于返回了视频流\n' % url)
+            return False
         resp = requests.get(url, verify=False)
     except requests.exceptions.ConnectionError:
-        logger.error("could not connect")
+        logger.error("无法连接到%s\n" % url)
         return False
     except urllib3.exceptions.LocationValueError:
-        logger.error("could not connect")
+        logger.error("无法连接到%s\n" % url)
         return False
     soup = BeautifulSoup(resp.text.lower(),  "html5lib")
     logger.debug("got status=%d for %s" % (resp.status_code, resp.url))
     if (resp.status_code == 401) or (resp.status_code == 403):
         type_name = type_name or search4type(resp)
         if not type_name:
-            logger.info("fail to identify device type after trying all patterns\n")
+            logger.info("无法识别设备类型或设备类型未收录\n")
             return False
-        logger.debug("device type is %s" % type_name)
+        logger.debug("设备类型为%s" % type_name)
         dev["device_type"] = type_name
-        return True if check_login(url=compose_url("%s:%s" % (dev["ip"], dev["port"]), resp.url), resp=resp, dev=dev) else False
+        return True if check_login(url=compose_url("%s:%s" % (dev["ip"], dev["port"]), dev["protocol"], resp.url), resp=resp, dev=dev) else False
     elif resp.status_code == 200:
         type_name = type_name or search4type(resp)
         if type_name:
-            logger.debug("device type is %s\n" % type_name)
+            logger.debug("设备类型为%s\n" % type_name)
             dev["device_type"] = type_name
             if "loginUrlPattern" in device_patterns[type_name]:
                 _ = re.search(device_patterns[type_name]["loginUrlPattern"], resp.text)
-                return check_login(url=compose_url("%s:%s" % (dev["ip"], dev["port"]), _.group()), resp=resp, dev=dev) if _ else False
+                return check_login(url=compose_url("%s:%s" % (dev["ip"], dev["port"]), dev["protocol"], _.group()), resp=resp, dev=dev) if _ else False
             else:
                 _ = device_patterns[type_name]["nextUrl"]
                 if _[0] == "string":
                     for _url in _[1:]:
                         if not _url:
-                            if check_login(url=compose_url("%s:%s" % (dev["ip"], dev["port"])), resp=resp, dev=dev):
+                            if check_login(url=compose_url("%s:%s" % (dev["ip"], dev["port"]), dev["protocol"]), resp=resp, dev=dev):
                                 return True
                         else:
-                            if check_login(url=compose_url("%s:%s" % (dev["ip"], dev["port"]), _url), resp=resp, dev=dev):
+                            if check_login(url=compose_url("%s:%s" % (dev["ip"], dev["port"]), dev["protocol"], _url), resp=resp, dev=dev):
                                 return True
                     return False
         elif stage == "look4LoginPage":
@@ -216,20 +220,20 @@ def verify(dev, stage="", uri=None, device_type=""):
             if soup.find('meta', attrs={'http-equiv': 'refresh'}):
                 return verify(dev, "look4LoginPage", soup.find('meta', attrs={'http-equiv': 'refresh'})['content'].partition('=')[2])
             else:
-                logger.info("fail to identify device type after trying all patterns")
+                logger.info("无法识别设备类型或设备类型未收录")
     elif resp.status_code == 404:
-        logger.warning("fail to identify type for %s due to 404 response\n" % url)
+        logger.warning("无法识别设备类型%s由于返回了404响应\n" % url)
         return False
     elif resp.status_code == 595:
-        logger.warning("device %s: failed to establish TCP connection\n" % url)
+        logger.warning("设备%s无法建立TCP连接\n" % url)
         return False
     elif resp.status_code == 301 or resp.status_code == 302:
         raise Exception("redirect should be automatically handled but not. source:%s, destiny:%s\n" % (dev["ip"], resp.url))
     else:
-        logger.warning("unexpected status code status for ip %s\n" % url)
+        logger.warning("未处理的HTTP状态码%s\n" % url)
         return False
     if not search4type(resp):
-        logger.warning("%s: didnot find dev type after trying all devices\n" % url)
+        logger.warning("无法识别设备%s的类型\n" % url)
         return False
 
 if __name__ == "__main__":

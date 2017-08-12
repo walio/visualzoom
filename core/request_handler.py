@@ -1,6 +1,5 @@
 # -*- coding:utf-8 -*-
 from tornado import ioloop, web, websocket
-from multiprocessing import Process
 import json
 import logging
 import glob
@@ -13,22 +12,16 @@ web_logger = logging.getLogger("webLog")
 
 
 def make_logger(ws, name):
-    fmt_str = '%(asctime)s - %(message)s'
-    formatter = logging.Formatter(fmt_str)
-    logging.basicConfig(level=logging.INFO, format=formatter)
-    logger = logging.getLogger(name)
-
     class LogInfoHandler(logging.Handler):
         def emit(self, record):
             try:
-                ws.write_message(record.getMessage())
+                if name != "devReport":
+                    ws.write_message({"level": record.levelname, "message": record.getMessage()})
             except websocket.WebSocketClosedError:
                 pass
 
-    lg = LogInfoHandler()
-    lg.setLevel(logging.DEBUG)
-    logger.addHandler(lg)
-
+    logger = logging.getLogger(name)
+    logger.addHandler(LogInfoHandler())
     logger.setLevel(logging.DEBUG)
     return logger
 
@@ -57,7 +50,7 @@ class PocGetter(BaseRequest):
         page = int(self.get_arguments("page")[0] if self.get_arguments("page") else 1)
         size = int(self.get_arguments("size")[0] if self.get_arguments("size") else 20)
         ret = []
-        for _ in glob.glob("poc\*.py")[(page-1)*size:page*size]:
+        for _ in glob.glob("poc/*.py")[(page-1)*size:page*size]:
             if _ == "poc\__init__.py":
                 continue
             try:

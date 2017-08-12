@@ -20,6 +20,7 @@ web_logger = logging.getLogger("webLog")
 # transform data from ZoomEye to the format we want
 def trans(match):
     return {
+        "protocol": match["protocol"]["application"].lower() or "http" if match.get("protocol") else "http",
         "ip": match["ip"],
         "port": match["portinfo"]["port"],
         "lat": match["geoinfo"]["location"]["lat"],
@@ -32,7 +33,7 @@ def trans(match):
 
 def get_access_token():
     data = {
-        "username": "1810440817@qq.com",
+        "username": "907937976@qq.com",
         "password": "bupt1210",
     }
     web_logger.info(u"获取access_token..")
@@ -62,12 +63,13 @@ def zoomeye_generator(query_string):
             if page > page_number:
                 break
         except KeyError as err:
-            if err == "matches":
-                web_logger.info(u"超过请求次数上限")  # 有请求次数限制
+            if resp.get("url") == "https://www.zoomeye.org/api/doc#limitations":
+                web_logger.info(u"达到ZoomEye请求次数上限，扫描已结束")  # 有请求次数限制
                 break
             else:
                 web_logger.info(u"其余键值错误:%s" % err)
                 web_logger.debug(resp)
+                break
 
 
 def ip_file_generator(file):

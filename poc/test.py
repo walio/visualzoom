@@ -7,7 +7,7 @@ config={
     "zoomeye_query":"zoomeye_query test"
 }
 def verify(dev):
-    if requests.get(dev["ip_addr"]).status_code == 200:
+    if requests.get("http://%s:%s" % (dev["ip"],dev["port"])).status_code == 200:
         time.sleep(10)
         logger.info("passed verify test")
         return True
