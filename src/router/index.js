@@ -53,7 +53,6 @@ export default new Router({
       path: '/admin',
       component: admin,
       name: '',
-      admin: true,
       iconCls: 'fa fa-list',
       leaf: true, // 只有一个节点
       children: [

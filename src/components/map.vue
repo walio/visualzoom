@@ -29,80 +29,6 @@
           roam: true
           // 百度地图的自定义样式，见 http://developer.baidu.com/map/jsdevelop-11.htm
         },
-        graphic: [
-          {
-            type: 'group',
-            left: 'center',
-            bottom: 0,
-            children: [
-              {
-                type: 'rect',
-                z: 100,
-                cursor: 'default',
-                shape: {
-                  width: 900,
-                  height: 150
-                },
-                style: {
-                  fill: 'rgba(150,150,150,0.8)',
-                  shadowBlur: 8,
-                  shadowOffsetX: 3,
-                  shadowOffsetY: 3,
-                  shadowColor: 'rgba(0,0,0,0.3)'
-                }
-              },
-              {
-                type: 'text',
-                id: 'log',
-                z: 100,
-                left: 20,
-                top: 20,
-                cursor: 'default',
-                style: {
-                  textVerticalAlign: 'top',
-                  fill: 'red',
-                  text: '扫描日志',
-                  font: '14px Microsoft YaHei'
-                }
-              }
-            ]
-          },
-          {
-            type: 'group',
-            right: 50,
-            top: 'middle',
-            children: [
-              {
-                type: 'rect',
-                z: 100,
-                cursor: 'default',
-                shape: {
-                  width: 200,
-                  height: 550
-                },
-                style: {
-                  fill: 'rgba(150,150,150,0.6)',
-                  shadowBlur: 8,
-                  shadowOffsetX: 3,
-                  shadowOffsetY: 3,
-                  shadowColor: 'rgba(0,0,0,0.3)'
-                }
-              },
-              {
-                type: 'text',
-                id: 'device',
-                z: 100,
-                left: 20,
-                top: 20,
-                cursor: 'default',
-                style: {
-                  text: '扫描结果',
-                  font: '14px Microsoft YaHei'
-                }
-              }
-            ]
-          }
-        ],
         toolbox: {
           right: '1%',
           feature: {
@@ -321,25 +247,6 @@
       this.chart = chart
     },
     watch: {
-      '$store.state.logInfo': {
-        handler (log) {
-          let _
-          if (log.length < 6) {
-            _ = log.join('\n')
-          } else {
-            _ = log.slice(log.length - 6).join('\n')
-          }
-          this.chart.setOption({
-            graphic: {
-              id: 'log',
-              style: {
-                text: _
-              }
-            }
-          })
-        },
-        deep: true
-      },
       '$store.state.devices': {
         handler (devices) {
           let data = devices.map((dev) => {
@@ -348,19 +255,7 @@
               value: [dev.lon, dev.lat, dev]
             }
           })
-          let _
-          if (devices.length < 35) {
-            _ = '扫描结果\n' + devices.map((dev) => { return `${dev.ip}\n` }).join('')
-          } else {
-            _ = '扫描结果\n' + devices.slice(devices.length - 35).map((dev) => { return `${dev.ip}\n` }).join('')
-          }
           this.chart.setOption({
-            graphic: {
-              id: 'device',
-              style: {
-                text: _
-              }
-            },
             series: [{
               name: '脆弱主机',
               data: data
@@ -368,6 +263,18 @@
           })
         },
         deep: true
+      }
+    },
+    methods: {
+      locate (lat, lon) {
+        this.chart.setOption({
+          bmap: {
+            center: [parseFloat(lon), parseFloat(lat)],
+            zoom: 14,
+            roam: true
+            // 百度地图的自定义样式，见 http://developer.baidu.com/map/jsdevelop-11.htm
+          }
+        })
       }
     }
   }

@@ -121,6 +121,12 @@ export default {
       this.$refs.menuCollapsed.getElementsByClassName('submenu-hook-' + i)[0].style.display = status ? 'block' : 'none'
     }
   },
+  beforeCreate () {
+    if (window.localStorage.remoteIp) {
+      this.$store.state.host = `http://${window.localStorage.remoteIp}`
+      this.$store.state.wshost = `ws://${window.localStorage.remoteIp}/ws`
+    }
+  },
   mounted () {
     let user = sessionStorage.getItem('user')
     if (user) {

@@ -16,8 +16,6 @@ export default new Vuex.Store({
       state.devices.push(dev)
     },
     addDevs (state, devs) {
-      window.a = devs
-      window.b = state.devices
       state.devices.push(...devs)
     },
     addLog (state, log) {

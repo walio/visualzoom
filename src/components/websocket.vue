@@ -63,7 +63,7 @@ export default {
   mounted () {
     let con = new Sock(this.$store.state.wshost)
     con.addListener('/log', (ws, data) => {
-      this.$store.commit('addLog', data)
+      this.$store.commit('addLog', JSON.parse(data))
     })
     con.addListener('/dev', (ws, data) => {
       try {

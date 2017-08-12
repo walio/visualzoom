@@ -1,6 +1,6 @@
 <template>
 <el-dialog title='配置选项' :visible.sync="visible">
-  <el-col style="margin-top: 3%;margin-bottom: 3%;">
+  <el-col style="margin-top: 3%;margin-bottom: 3%;text-align: center;">
     <el-form :model="config" label-width="25%" id="config">
       <el-form-item
         v-for="(ipSeg, index) in config.ip_ranges"
@@ -61,10 +61,7 @@
 </style>
 <script>
   import axios from 'axios'
-  import ElCol from 'element-ui/packages/col/src/col'
-
   export default{
-    components: {ElCol},
     data () {
       let validateAddIp = (rule, value, callback) => {
         // todo: validate ip

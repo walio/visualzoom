@@ -12,6 +12,7 @@ import report from './components/report'
 import config from './components/config'
 import websocket from './components/websocket'
 import ipInput from './components/ipinput'
+import log from './components/log'
 
 Vue.use(Vuex)
 Vue.use(ElementUI)
@@ -21,6 +22,7 @@ Vue.component('report', report)
 Vue.component('config', config)
 Vue.component('websocket', websocket)
 Vue.component('ip-input', ipInput)
+Vue.component('log', log)
 
 // Vue.prototype.$websocket = websocket
 // Vue.config.productionTip = false
