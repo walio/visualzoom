@@ -17,6 +17,8 @@ def make_logger(ws, name):
             try:
                 if name != "devReport":
                     ws.write_message({"level": record.levelname, "message": record.getMessage()})
+                else:
+                    ws.write_message(record.getMessage())
             except websocket.WebSocketClosedError:
                 pass
 

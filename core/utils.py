@@ -20,7 +20,8 @@ web_logger = logging.getLogger("webLog")
 # transform data from ZoomEye to the format we want
 def trans(match):
     return {
-        "protocol": match["protocol"]["application"].lower() or "http" if match.get("protocol") else "http",
+        "protocol": match["protocol"]["application"] or "http"
+        if (match.get("protocol") and match["protocol"]["application"] in ["HTTP", "HTTPS"]) else "http",
         "ip": match["ip"],
         "port": match["portinfo"]["port"],
         "lat": match["geoinfo"]["location"]["lat"],
@@ -151,10 +152,10 @@ class Scan(threading.Thread):
                     self.state.wait()
             try:
                 print("start")
-                res = next(self.target_iter)
-                if res[0]:
-                    dev_logger.info(json.dumps(res[1]))
-                    device_store.hmset("%s:%s" % (res[1]["ip"], res[1]["port"]), res[1])
+                res, dev = next(self.target_iter)
+                if res:
+                    dev_logger.info(json.dumps(dev))
+                    device_store.hmset("%s:%s" % (dev["ip"], dev["port"]), dev)
             except StopIteration:
                 dev_logger.info("scanFinished")
                 break

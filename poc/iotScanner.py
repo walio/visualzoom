@@ -84,17 +84,22 @@ def check_login(dev, url, resp):
             else:
                 logger.info("设备%s, 类型为%s，已经更改了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
                 return False
-        elif requests.get(url, headers={
+        else:
+            try:
+                if requests.get(url, headers={
             "Authorization": "Basic %s" % base64.b64encode(auth[1].encode(encoding='gb2312')).decode('utf-8')
         }, verify=False).status_code == 200:
-            logger.info("设备%s，类型为%s，使用了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
-            dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
-            dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
-            dev["login_url"] = url
-            return True
-        else:
-            logger.warning("设备%s, 类型为%s，已经更改了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
-            return False
+                    logger.info("设备%s，类型为%s，使用了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
+                    dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
+                    dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
+                    dev["login_url"] = url
+                    return True
+                else:
+                    logger.warning("设备%s, 类型为%s，已经更改了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
+                    return False
+            except requests.exceptions.ConnectionError:
+                logger.warning("设备%s, 类型为%s，已经更改了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
+                return False
     elif auth[0] == "form":
         if auth[1].startswith("sub") != ("extractFormData" in device_patterns[dev["device_type"]]):
             raise Exception("lack one of extractFormData and substitute")
@@ -163,8 +168,9 @@ def check_login(dev, url, resp):
 def check_init_login():
     pass
 
-
+# todo: use beautiful soup to handle all redirect
 def verify(dev, stage="", uri=None, device_type=""):
+    logger.info("开始检测设备%s:%s是否存在默认密码" % (dev["ip"], dev["port"]))
     if device_type not in device_patterns.keys():
         logger.error("设备类型未指定，自定识别设备类型")
         type_name = ""
@@ -175,7 +181,7 @@ def verify(dev, stage="", uri=None, device_type=""):
         return check_init_login()
     try:
         resp = requests.get(url, stream=True, verify=False)
-        if resp.headers.get('Content-Type') == 'video/h264':
+        if resp.headers.get('Content-Type') and ("audio" in resp.headers["Content-Type"] or "video" in resp.headers["Content-Type"]):
             logger.error('无法识别设备%s的类型由于返回了视频流\n' % url)
             return False
         resp = requests.get(url, verify=False)
@@ -218,7 +224,7 @@ def verify(dev, stage="", uri=None, device_type=""):
             pass
         elif not stage:
             if soup.find('meta', attrs={'http-equiv': 'refresh'}):
-                return verify(dev, "look4LoginPage", soup.find('meta', attrs={'http-equiv': 'refresh'})['content'].partition('=')[2])
+                return verify(dev, "look4LoginPage", soup.find('meta', attrs={'http-equiv': 'refresh'})['content'].partition('=')[2].strip())
             else:
                 logger.info("无法识别设备类型或设备类型未收录")
     elif resp.status_code == 404:
