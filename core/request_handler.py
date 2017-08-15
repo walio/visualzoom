@@ -9,7 +9,7 @@ from core.utils import device_store, config_store, extra_store, set_config, Scan
 global scan_thread
 dev_logger = logging.getLogger("devReport")
 web_logger = logging.getLogger("webLog")
-
+logging.basicConfig(level=logging.DEBUG)
 
 def make_logger(ws, name):
     class LogInfoHandler(logging.Handler):

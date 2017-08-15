@@ -87,8 +87,8 @@ def check_login(dev, url, resp):
         else:
             try:
                 if requests.get(url, headers={
-            "Authorization": "Basic %s" % base64.b64encode(auth[1].encode(encoding='gb2312')).decode('utf-8')
-        }, verify=False).status_code == 200:
+                    "Authorization": "Basic %s" % base64.b64encode(auth[1].encode(encoding='gb2312')).decode('utf-8')
+                }, verify=False, timeout=60).status_code == 200:
                     logger.info("设备%s，类型为%s，使用了默认用户名密码\n" % (dev["ip"], dev["device_type"]))
                     dev["admin"] = device_patterns[dev["device_type"]]["pass"][0]
                     dev["pass"] = device_patterns[dev["device_type"]]["pass"][1]
@@ -168,6 +168,7 @@ def check_login(dev, url, resp):
 def check_init_login():
     pass
 
+
 # todo: use beautiful soup to handle all redirect
 def verify(dev, stage="", uri=None, device_type=""):
     logger.info("开始检测设备%s:%s是否存在默认密码" % (dev["ip"], dev["port"]))
@@ -184,11 +185,14 @@ def verify(dev, stage="", uri=None, device_type=""):
         if resp.headers.get('Content-Type') and ("audio" in resp.headers["Content-Type"] or "video" in resp.headers["Content-Type"]):
             logger.error('无法识别设备%s的类型由于返回了视频流\n' % url)
             return False
-        resp = requests.get(url, verify=False)
+        resp = requests.get(url, verify=False, timeout=60)
     except requests.exceptions.ConnectionError:
         logger.error("无法连接到%s\n" % url)
         return False
     except urllib3.exceptions.LocationValueError:
+        logger.error("无法连接到%s\n" % url)
+        return False
+    except requests.exceptions.ReadTimeout:
         logger.error("无法连接到%s\n" % url)
         return False
     soup = BeautifulSoup(resp.text.lower(),  "html5lib")

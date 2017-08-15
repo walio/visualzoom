@@ -25,7 +25,7 @@ if __name__ == "__main__":
 # 测试：
 # 每种设备取20条数据，只保证能检测出设备类型，
 # 已通过测试
-# mobotix IQinVision JVC Brickcom GeoVision Grandstream
+# mobotix page64 IQinVision JVC Brickcom GeoVision Grandstream
 # fixme:
 # 1. zoomeye查询字符串不准确，查到的设备不是这个类型的，能不能根据模式json生成查询字符串？
 # 2. 模式json不准确

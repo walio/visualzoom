@@ -40,6 +40,7 @@ def get_access_token():
     web_logger.info(u"获取access_token..")
     resp = json.loads(requests.post(url="https://api.zoomeye.org/user/login", data=json.dumps(data)).text)
     web_logger.info("已获取access_token")
+    web_logger.debug(resp)
     return resp["access_token"]
 
 
