@@ -9,6 +9,12 @@ pip install --user requests tornado html5lib redis beautifulsoup4 hiredis
 
 install redis
 
+
+# Screenshot
+
+!["screenshot"](screenshot.png)
+
+
 # Quick Start
 
 python3 map.py -s
