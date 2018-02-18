@@ -31,10 +31,6 @@ open http://localhost/#/admin to manage admin
 
 if run in a remote host, set localStorage.remoteIp to the ip of your remote host in the console, like ` localStorage.remoteIp = 127.0.0.1`
 
-
-
-# screenshot
-
 # Refer
 
 https://github.com/taylorchen709/vue-admin
